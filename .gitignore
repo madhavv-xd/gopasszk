@@ -1,0 +1,47 @@
+# --- Go build artifacts ---
+# Compiled binaries. Your project has multiple cmd/ entrypoints
+# (server, cryptotest, later a real CLI client) — this catches
+# their compiled output wherever it lands.
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/cmd/*/*.exe
+/cmd/*/*.test
+
+# go test's compiled test binaries and coverage output
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# go build cache / vendor dir (only relevant if you ever vendor deps)
+/vendor/
+
+# --- Environment / secrets ---
+# Postgres connection strings, JWT signing secrets, etc. will live
+# in an .env file starting Phase 3/4 — never commit it.
+.env
+.env.*
+!.env.example
+
+# --- OS/editor cruft ---
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+
+# --- Frontend (Phase 6 web client, React) ---
+# Not needed yet, but harmless to have ready — avoids a second
+# .gitignore file later when the web/ folder appears.
+node_modules/
+dist/
+build/
+.env.local
+
+# --- Docker (Phase 6) ---
+# Local override files people sometimes use for personal tweaks
+docker-compose.override.yml
