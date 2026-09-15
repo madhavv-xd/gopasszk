@@ -22,4 +22,3 @@ func main()  {
 	fmt.Println("both connextion and ping successful")
 }
 
-
