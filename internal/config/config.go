@@ -1,0 +1,44 @@
+package config 
+
+import(
+	"os"
+	"path/filepath"
+	"github.com/joho/godotenv"
+	"fmt"
+)
+
+type Config struct {
+	DBUser     string
+	DBPassword string
+	DBName     string
+	DBHost     string
+}
+
+func findEnvFile() string {
+	dir, _ := os.Getwd()
+	for {
+		envPath := filepath.Join(dir, ".env")
+		if _, err := os.Stat(envPath); err == nil {
+			return envPath
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ".env"
+		}
+		dir = parent
+	}
+}
+
+func LoadConfig() *Config {
+	err := godotenv.Load(findEnvFile())
+	if err != nil {
+		fmt.Println("Warning: no .env file found:", err)
+	}
+
+	return &Config{
+		DBUser:     os.Getenv("POSTGRES_USER"),
+		DBPassword: os.Getenv("POSTGRES_PASSWORD"),
+		DBName:     os.Getenv("POSTGRES_DB"),
+		DBHost:     "localhost",
+	}
+}

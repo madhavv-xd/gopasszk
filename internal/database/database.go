@@ -2,21 +2,16 @@ package database
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/joho/godotenv"
+	"github.com/madhavv-xd/gopasszk/internal/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func Connect() (*gorm.DB , error) {
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Println("Warning: no .env file found: " , err)
-	}
+   cfg:= config.LoadConfig()
 
-	dsn := fmt.Sprintf("host=localhost user=%s password=%s dbname=%s port=5432 sslmode=disable" ,
-	os.Getenv("POSTGRES_USER") , os.Getenv("POSTGRES_PASSWORD") , os.Getenv("POSTGRES_DB"))
+	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=5432 sslmode=disable" ,
+	cfg.DBHost ,cfg.DBUser , cfg.DBPassword , cfg.DBName)
 	db , err := gorm.Open(postgres.Open(dsn) , &gorm.Config{})
 	if err != nil {
 		return nil ,err
@@ -35,3 +30,4 @@ func Ping(db *gorm.DB) error {
 	}
 	return nil
 }
+
