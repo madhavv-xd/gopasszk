@@ -21,26 +21,26 @@ func main() {
 	//now the encryption and decryption matching
 	plaintext := []byte("my-git-pass")
 
-	nonce , ciphertext , err  := crypto.Encrypt(key , plaintext)
+	nonce, ciphertext, err := crypto.Encrypt(key, plaintext)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("nonce: %x\n" , nonce)
-	fmt.Printf("ciphertext: %x\n" , ciphertext)
+	fmt.Printf("nonce: %x\n", nonce)
+	fmt.Printf("ciphertext: %x\n", ciphertext)
 
-	decrypted , err := crypto.Decrypt(key , nonce , ciphertext)
+	decrypted, err := crypto.Decrypt(key, nonce, ciphertext)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("decrypted: %x\n" , string(decrypted))
+	fmt.Printf("decrypted: %x\n", string(decrypted))
 
-	if(string(decrypted) == string(plaintext)) {
+	if string(decrypted) == string(plaintext) {
 		fmt.Println("round trip successful")
 	} else {
-		fmt.Println("round trip failed")	
+		fmt.Println("round trip failed")
 	}
 }

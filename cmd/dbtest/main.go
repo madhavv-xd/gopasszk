@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"github.com/madhavv-xd/gopasszk/internal/database"
+	"log"
 )
 
-func main()  {
-	db , err := database.Connect()
+func main() {
+	db, err := database.Connect()
 	if err != nil {
 		log.Fatal("failed to connect")
 		return
@@ -21,4 +21,3 @@ func main()  {
 	}
 	fmt.Println("both connextion and ping successful")
 }
-

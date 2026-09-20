@@ -1,10 +1,10 @@
-package config 
+package config
 
-import(
+import (
+	"fmt"
+	"github.com/joho/godotenv"
 	"os"
 	"path/filepath"
-	"github.com/joho/godotenv"
-	"fmt"
 )
 
 type Config struct {

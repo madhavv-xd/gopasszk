@@ -1,15 +1,16 @@
 package crypto
 
 import (
-	"testing"
-	"crypto/cipher"
+	"bytes"
 	"crypto/aes"
+	"crypto/cipher"
+	"testing"
 )
 
 func TestEncryptDecryptRoundTrip(t *testing.T) {
-	salt , err := GenerateSalt()
+	salt, err := GenerateSalt()
 	if err != nil {
-		t.Fatalf("generationSalt failed: %v" , err)
+		t.Fatalf("generationSalt failed: %v", err)
 	}
 
 	password := []byte("test-password-123")
@@ -17,9 +18,9 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 
 	plaintext := []byte("my-git-pass")
 
-	nonce , ciphertext , err := Encrypt(key , plaintext)
+	nonce, ciphertext, err := Encrypt(key, plaintext)
 	if err != nil {
-		t.Fatalf("encryption failed: %v" , err)
+		t.Fatalf("encryption failed: %v", err)
 	}
 	decrypted, err := Decrypt(key, nonce, ciphertext)
 	if err != nil {
@@ -27,9 +28,10 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 	}
 
 	if string(decrypted) != string(plaintext) {
-	t.Fatalf("round trip mismatch: got %q, want %q", string(decrypted), string(plaintext))
+		t.Fatalf("round trip mismatch: got %q, want %q", string(decrypted), string(plaintext))
 	}
 }
+
 //now the sharednonce one
 func sealWithFixedNonce(t *testing.T, key []byte, nonce []byte, plaintext []byte) []byte {
 	block, err := aes.NewCipher(key)
@@ -77,4 +79,61 @@ func xorBytes(a []byte, b []byte) []byte {
 		result[i] = a[i] ^ b[i]
 	}
 	return result
+}
+
+func TestAuthAndEncKeyDiffer(t *testing.T) {
+	//pass the password and salt to both the funcs and assert that both the hashes i get are different
+	password := []byte("hunter2")
+	salt := []byte("0123456789abcdef")
+
+	//the initial authHash
+	first := DeriveAuthHash(password, salt)
+	//2nd -> encryption hash
+	second := DeriveEncryptionKey(password, salt)
+
+	//if they;re equal , then equal else , false
+	if bytes.Equal(first, second) {
+		t.Errorf("auth and enc key must differ ")
+	}
+}
+
+//test determinism
+func TestDeterForAuth(t *testing.T) {
+	password := []byte("hunter2")
+	salt := []byte("0123456789abcdef")
+
+	first := DeriveAuthHash(password, salt)
+	second := DeriveAuthHash(password, salt)
+
+	if !bytes.Equal(first, second) {
+		t.Errorf("DeriveAuthHash returned different output for identical inputs")
+	}
+}
+
+func TestDeterForEnc(t *testing.T) {
+	password := []byte("hunter2")
+	salt := []byte("0123456789abcdef")
+
+	first := DeriveEncryptionKey(password, salt)
+	second := DeriveEncryptionKey(password, salt)
+
+	if !bytes.Equal(first, second) {
+		t.Errorf("DeriveEncryptionKey returned different output for identical inputs")
+	}
+}
+
+func TestHelperDoesNotCorruptSalt(t *testing.T) {
+	salt := make([]byte, 16, 32)
+	for i := range salt {
+		salt[i] = byte(i)
+	}
+	authInput := helperSalt(salt, authLabel)
+	encInput := helperSalt(salt, encLabel)
+
+	if !bytes.Equal(authInput[16:], []byte(authLabel)) {
+		t.Errorf("auth input tail corrupted, got %q", authInput[16:])
+	}
+	if !bytes.Equal(encInput[16:], []byte(encLabel)) {
+		t.Errorf("enc input tail corrupted, got %q", encInput[16:])
+	}
 }
