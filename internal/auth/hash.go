@@ -27,11 +27,11 @@ func encodesAuthKey(authHash []byte) string {
 	return base64.StdEncoding.EncodeToString(authHash)
 }
 
-func VerifyAuthKey(authHash []byte , storedHash string) (bool , error) {
+func VerifyAuthKey(authHash []byte, storedHash string) (bool, error) {
 	encoded := encodesAuthKey(authHash)
-	decoded , err:= argon2id.ComparePasswordAndHash(encoded , storedHash)
+	decoded, err := argon2id.ComparePasswordAndHash(encoded, storedHash)
 	if err != nil {
-		return false , err 
+		return false, err
 	}
-	return decoded , nil 
+	return decoded, nil
 }

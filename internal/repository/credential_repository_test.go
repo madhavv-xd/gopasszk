@@ -41,7 +41,7 @@ func TestCredentialsByFidelity(t *testing.T) {
 	user := models.User{
 		Email:    "madhav@gmail.com",
 		AuthHash: "placeholder-auth-hash",
-		Salt: salt,
+		Salt:     salt,
 	}
 
 	err = repository.CreateUser(db, &user)
@@ -86,21 +86,21 @@ func TestCredentialsByFidelity(t *testing.T) {
 }
 
 func TestSaltByFidelity(t *testing.T) {
-	db , err := database.Connect()
+	db, err := database.Connect()
 	if err != nil {
-		t.Fatalf("failed connecting to the db %v",err)
+		t.Fatalf("failed connecting to the db %v", err)
 	}
 	testSalt := []byte{
-    0x00, 0x8B, 0x3F, 0xFF,
-    0x21, 0x80, 0xC4, 0x0A,
-    0x5D, 0xE7, 0x12, 0x9A,
-    0x00, 0x6C, 0xF3, 0x47,
+		0x00, 0x8B, 0x3F, 0xFF,
+		0x21, 0x80, 0xC4, 0x0A,
+		0x5D, 0xE7, 0x12, 0x9A,
+		0x00, 0x6C, 0xF3, 0x47,
 	}
 
-	user := models.User {
-		Email: "mega@gmail.com",
+	user := models.User{
+		Email:    "mega@gmail.com",
 		AuthHash: "sample-auth-hash",
-		Salt: testSalt,
+		Salt:     testSalt,
 	}
 
 	err = repository.CreateUser(db, &user)
@@ -112,22 +112,22 @@ func TestSaltByFidelity(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed to cleanup the test user: %v", err)
 		}
-	}() //defered and deleted user 
+	}() //defered and deleted user
 
-	got , err := repository.GetUserByEmail(db , user.Email)
+	got, err := repository.GetUserByEmail(db, user.Email)
 	if err != nil {
-		t.Fatalf("error getting the user %v" , err)
+		t.Fatalf("error getting the user %v", err)
 	}
 
-	if len(got.Salt) == 16 && (bytes.Equal(got.Salt , testSalt)) {
-		
+	if len(got.Salt) == 16 && (bytes.Equal(got.Salt, testSalt)) {
+
 	}
 
 	if len(got.Salt) != 16 {
-		t.Errorf("salt lenght: expected 16 , got %d" , len(got.Salt))
+		t.Errorf("salt lenght: expected 16 , got %d", len(got.Salt))
 	}
 
-	if	!bytes.Equal(got.Salt , testSalt) {
-		t.Errorf("salt bytes changed: expected %x, got %x" , testSalt , got.Salt)
+	if !bytes.Equal(got.Salt, testSalt) {
+		t.Errorf("salt bytes changed: expected %x, got %x", testSalt, got.Salt)
 	}
 }

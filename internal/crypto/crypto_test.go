@@ -32,7 +32,7 @@ func TestEncryptDecryptRoundTrip(t *testing.T) {
 	}
 }
 
-//now the sharednonce one
+// now the sharednonce one
 func sealWithFixedNonce(t *testing.T, key []byte, nonce []byte, plaintext []byte) []byte {
 	block, err := aes.NewCipher(key)
 	if err != nil {
@@ -97,7 +97,7 @@ func TestAuthAndEncKeyDiffer(t *testing.T) {
 	}
 }
 
-//test determinism
+// test determinism
 func TestDeterForAuth(t *testing.T) {
 	password := []byte("hunter2")
 	salt := []byte("0123456789abcdef")

@@ -70,7 +70,7 @@ func Encrypt(key []byte, plaintext []byte) (nonce []byte, ciphertext []byte, err
 	return nonce, ciphertext, nil
 }
 
-//now the decrypt function -> for decrypting
+// now the decrypt function -> for decrypting
 func Decrypt(key []byte, nonce []byte, ciphertext []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {

@@ -23,4 +23,3 @@ func GetUserByEmail(db *gorm.DB, email string) (*models.User, error) {
 	}
 	return &user, nil
 }
-
