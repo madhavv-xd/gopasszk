@@ -12,6 +12,7 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBHost     string
+	ServerSecret string
 }
 
 func findEnvFile() string {
@@ -34,11 +35,11 @@ func LoadConfig() *Config {
 	if err != nil {
 		fmt.Println("Warning: no .env file found:", err)
 	}
-
 	return &Config{
 		DBUser:     os.Getenv("POSTGRES_USER"),
 		DBPassword: os.Getenv("POSTGRES_PASSWORD"),
 		DBName:     os.Getenv("POSTGRES_DB"),
 		DBHost:     "localhost",
+		ServerSecret: os.Getenv("SALT_HMAC_SECRET"),
 	}
 }

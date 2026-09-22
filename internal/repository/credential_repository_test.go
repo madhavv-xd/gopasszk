@@ -119,10 +119,6 @@ func TestSaltByFidelity(t *testing.T) {
 		t.Fatalf("error getting the user %v", err)
 	}
 
-	if len(got.Salt) == 16 && (bytes.Equal(got.Salt, testSalt)) {
-
-	}
-
 	if len(got.Salt) != 16 {
 		t.Errorf("salt lenght: expected 16 , got %d", len(got.Salt))
 	}

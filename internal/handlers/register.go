@@ -20,10 +20,6 @@ type RegisterRequest struct {
 	AuthHash string `json:"auth_hash" binding:"required,base64"`
 }
 
-type Handler struct {
-	DB *gorm.DB
-}
-
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	err := c.ShouldBindJSON(&req)
