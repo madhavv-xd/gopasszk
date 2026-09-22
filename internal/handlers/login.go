@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"encoding/base64"
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/madhavv-xd/gopasszk/internal/auth"
@@ -41,6 +43,11 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "login ok"}) // placeholder until Step 5 (JWT)
+	token , err := auth.IssueToken(user.ID , h.JWTSecret , 24*time.Hour)
+	if err != nil {
+		log.Printf("issue token failed: %v" , err)
+		c.JSON(http.StatusInternalServerError , gin.H{"error":"internal error"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"token": token}) // placeholder until Step 5 (JWT)
 }

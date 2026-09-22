@@ -13,6 +13,7 @@ type Config struct {
 	DBName     string
 	DBHost     string
 	ServerSecret string
+	JWTSecret string
 }
 
 func findEnvFile() string {
@@ -41,5 +42,6 @@ func LoadConfig() *Config {
 		DBName:     os.Getenv("POSTGRES_DB"),
 		DBHost:     "localhost",
 		ServerSecret: os.Getenv("SALT_HMAC_SECRET"),
+		JWTSecret: os.Getenv("JWT_SECRET"),
 	}
 }

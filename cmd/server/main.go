@@ -7,6 +7,7 @@ import (
 	"github.com/madhavv-xd/gopasszk/internal/config"
 	"github.com/madhavv-xd/gopasszk/internal/database"
 	"github.com/madhavv-xd/gopasszk/internal/handlers"
+	"github.com/madhavv-xd/gopasszk/internal/middleware"
 )
 
 func main() {
@@ -16,7 +17,7 @@ func main() {
 		log.Fatalf("error connecting to the db %v" , err)
 	}
 	cfg := config.LoadConfig()
-	h := &handlers.Handler{DB: db , Secret:[]byte(cfg.ServerSecret)} //handler has been created here 
+	h := &handlers.Handler{DB: db , Secret:[]byte(cfg.ServerSecret) , JWTSecret: []byte(cfg.JWTSecret)} //handler has been created here 
 
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
@@ -25,6 +26,7 @@ func main() {
 	router.POST("/register", h.Register)
 	router.GET("/salt" , h.GetSalt)
 	router.POST("/login" , h.Login)
+	router.GET("/me" , middleware.RequireAuth(h.JWTSecret) , h.Me)
 	err = router.Run(":8080")
 	if err != nil {
 		log.Fatal(err)
