@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/base64"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/madhavv-xd/gopasszk/internal/auth"
 	"github.com/madhavv-xd/gopasszk/internal/repository"
+	"gorm.io/gorm"
 )
 
 const dummyHash = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHR2YWx1ZQ$ZmFrZWhhc2hvdXRwdXR2YWx1ZWhlcmU"
@@ -32,17 +34,32 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	user, err := repository.GetUserByEmail(h.DB, req.Email)
-	if err != nil {
-		auth.VerifyAuthKey(authHash, dummyHash)
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
-		return
+	//error handling should be proper here , also convers the db outages
+	var hashToCheck string 
+	userFound := false 
+	switch{
+	case err != nil :
+		hashToCheck = user.AuthHash
+		userFound=true 
+	case errors.Is(err , gorm.ErrRecordNotFound):
+		hashToCheck = dummyHash
+	default:
+	log.Printf("login: user lookup failed: %v" , err)
+	c.JSON(http.StatusInternalServerError , gin.H{"error":"database isnt responding"})
+	return
 	}
-
-	match, err := auth.VerifyAuthKey(authHash, user.AuthHash )
+	
+	match, err := auth.VerifyAuthKey(authHash, hashToCheck )
 	if err != nil || !match {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
+
+	if !match || !userFound {
+		c.JSON(http.StatusUnauthorized , gin.H{"error":"not found"})
+		return
+	}
+
 	token , err := auth.IssueToken(user.ID , h.JWTSecret , 24*time.Hour)
 	if err != nil {
 		log.Printf("issue token failed: %v" , err)
