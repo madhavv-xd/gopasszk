@@ -1,0 +1,209 @@
+basePath: /
+definitions:
+  handlers.CredentialRequest:
+    properties:
+      password_ciphertext:
+        type: string
+      site_name:
+        maxLength: 255
+        type: string
+      username_ciphertext:
+        type: string
+    required:
+    - password_ciphertext
+    - site_name
+    - username_ciphertext
+    type: object
+  handlers.CredentialResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      password_ciphertext:
+        type: string
+      site_name:
+        type: string
+      updated_at:
+        type: string
+      username_ciphertext:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: Zero-knowledge password manager backend. The server only stores auth
+    hashes and ciphertext.
+  title: Gopass API
+  version: "1.0"
+paths:
+  /credentials:
+    get:
+      description: Returns all of the authenticated user's credentials, still encrypted.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              items:
+                $ref: '#/definitions/handlers.CredentialResponse'
+              type: array
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List credentials
+      tags:
+      - credentials
+    post:
+      consumes:
+      - application/json
+      description: Stores an encrypted credential. The owner comes from the JWT, never
+        the body.
+      parameters:
+      - description: Encrypted credential
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CredentialRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handlers.CredentialResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a credential
+      tags:
+      - credentials
+  /credentials/{id}:
+    delete:
+      description: Deletes a credential. Returns 404 if it doesn't exist or isn't
+        yours.
+      parameters:
+      - description: Credential ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a credential
+      tags:
+      - credentials
+    put:
+      consumes:
+      - application/json
+      description: Replaces a credential's site name and ciphertexts. Returns 404
+        if it doesn't exist or isn't yours.
+      parameters:
+      - description: Credential ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New encrypted values
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CredentialRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a credential
+      tags:
+      - credentials
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

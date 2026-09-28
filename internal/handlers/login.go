@@ -38,7 +38,7 @@ func (h *Handler) Login(c *gin.Context) {
 	var hashToCheck string 
 	userFound := false 
 	switch{
-	case err != nil :
+	case err == nil:
 		hashToCheck = user.AuthHash
 		userFound=true 
 	case errors.Is(err , gorm.ErrRecordNotFound):
