@@ -20,6 +20,18 @@ type LoginRequest struct {
 	AuthHash string `json:"auth_hash" binding:"required,base64"`
 }
 
+// Login godoc
+// @Summary      Log in
+// @Description  Verifies the client-derived auth hash and returns a JWT. Wrong password and unknown email return the same 401.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      LoginRequest       true  "Email and auth hash (base64, 32 bytes)"
+// @Success      200      {object}  map[string]string
+// @Failure      400      {object}  map[string]string
+// @Failure      401      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

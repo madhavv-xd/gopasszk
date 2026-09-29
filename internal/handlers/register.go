@@ -20,6 +20,19 @@ type RegisterRequest struct {
 	AuthHash string `json:"auth_hash" binding:"required,base64"`
 }
 
+
+// Register godoc
+// @Summary      Register a new account
+// @Description  Creates a user from a client-generated salt and client-derived auth hash (both base64). The server never receives the master password.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request  body      RegisterRequest    true  "Email, salt (16 bytes), auth hash (32 bytes)"
+// @Success      201      {object}  map[string]string
+// @Failure      400      {object}  map[string]string
+// @Failure      409      {object}  map[string]string
+// @Failure      500      {object}  map[string]string
+// @Router       /register [post]
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	err := c.ShouldBindJSON(&req)

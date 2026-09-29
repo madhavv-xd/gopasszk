@@ -29,6 +29,29 @@ definitions:
       username_ciphertext:
         type: string
     type: object
+  handlers.LoginRequest:
+    properties:
+      auth_hash:
+        type: string
+      email:
+        type: string
+    required:
+    - auth_hash
+    - email
+    type: object
+  handlers.RegisterRequest:
+    properties:
+      auth_hash:
+        type: string
+      email:
+        type: string
+      salt:
+        type: string
+    required:
+    - auth_hash
+    - email
+    - salt
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -201,6 +224,144 @@ paths:
       summary: Update a credential
       tags:
       - credentials
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the client-derived auth hash and returns a JWT. Wrong
+        password and unknown email return the same 401.
+      parameters:
+      - description: Email and auth hash (base64, 32 bytes)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Log in
+      tags:
+      - auth
+  /me:
+    get:
+      description: Returns the user ID from the JWT. Useful for checking a token.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Current user
+      tags:
+      - auth
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a user from a client-generated salt and client-derived
+        auth hash (both base64). The server never receives the master password.
+      parameters:
+      - description: Email, salt (16 bytes), auth hash (32 bytes)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Register a new account
+      tags:
+      - auth
+  /salt:
+    get:
+      description: Returns the account's salt so the client can derive its keys. Unknown
+        emails get a deterministic fake salt, so this can't be used to check which
+        emails are registered.
+      parameters:
+      - description: Account email
+        in: query
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get the salt for an email
+      tags:
+      - auth
 securityDefinitions:
   BearerAuth:
     in: header

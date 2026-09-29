@@ -9,6 +9,15 @@ import (
 	"github.com/madhavv-xd/gopasszk/internal/auth"
 )
 
+// GetSalt godoc
+// @Summary      Get the salt for an email
+// @Description  Returns the account's salt so the client can derive its keys. Unknown emails get a deterministic fake salt, so this can't be used to check which emails are registered.
+// @Tags         auth
+// @Produce      json
+// @Param        email  query     string  true  "Account email"
+// @Success      200    {object}  map[string]string
+// @Failure      400    {object}  map[string]string
+// @Router       /salt [get]
 func (h* Handler) GetSalt(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
