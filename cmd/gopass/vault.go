@@ -22,7 +22,11 @@ func unlock() (*client.Client, []byte, error) {
 		return nil, nil, err
 	}
 
-	c := client.New(serverURL())
+	u , err := serverURL()
+	if err != nil {
+		return nil , nil , err
+	}
+	c := client.New(u)
 	salt, err := c.GetSalt(s.Email)
 	if err != nil {
 		return nil, nil, err

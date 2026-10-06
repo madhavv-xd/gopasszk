@@ -31,6 +31,10 @@ func main() {
 		err = runEdit(args)
 	case "delete":
 		err = runDelete(args)
+	case "logout":
+		err = runLogout(args)
+	case "help" , "-h" , "--help":
+		err = runHelp(args)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", cmd)
 		usage()
@@ -52,7 +56,9 @@ commands:
   add           add a credential
   list          list and decrypt your credentials
   edit <id>     change a credential
-  delete <id>   delete a credential`)
+  delete <id>   delete a credential
+  logout 		logout of the cli
+  `)
 }
 
 func runRegister(args []string) error {
@@ -78,7 +84,11 @@ func runRegister(args []string) error {
 	}
 	authHash := crypto.DeriveAuthHash(pw, salt)
 
-	c := client.New(serverURL())
+	u , err := serverURL()
+	if err != nil {
+		return err 
+	}
+	c := client.New(u)
 	if err := c.Register(email, salt, authHash); err != nil {
 		return err
 	}
@@ -96,7 +106,11 @@ func runLogin(args []string) error {
 		return err
 	}
 
-	c := client.New(serverURL())
+	u , err := serverURL()
+	if err != nil {
+		return err 
+	}
+	c := client.New(u)
 	salt, err := c.GetSalt(email)
 	if err != nil {
 		return err
@@ -113,6 +127,15 @@ func runLogin(args []string) error {
 	fmt.Println("Logged in.")
 	return nil
 }
+
+func runLogout(args []string) error{
+	if err := deleteSession(); err != nil {
+		return err 
+	}
+	fmt.Println("logged out.")
+	return nil 
+}
+
 func runAdd(args []string) error {
 	c, key, err := unlock()
 	if err != nil {
@@ -222,7 +245,11 @@ func runDelete(args []string) error {
 	if err != nil {
 		return err
 	}
-	c := client.New(serverURL())
+	u , err := serverURL()
+	if err != nil {
+		return err 
+	}
+	c := client.New(u)
 	c.Token = s.Token
 
 	if err := c.DeleteCredential(args[0]); err != nil {
@@ -230,4 +257,9 @@ func runDelete(args []string) error {
 	}
 	fmt.Println("Deleted.")
 	return nil
+}
+
+func runHelp(args []string) error {
+	usage()
+	return nil 
 }

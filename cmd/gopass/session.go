@@ -35,6 +35,18 @@ func saveSession(s session) error {
 	return os.WriteFile(path, data, 0o600)
 }
 
+func deleteSession() error {
+	path , err := sessionPath()
+	if err != nil {
+		return err 
+	}
+	err = os.Remove(path)
+	if errors.Is(err , os.ErrNotExist){
+		return errors.New("not logged in")
+	}
+	return err 
+}
+
 func loadSession() (session, error) {
 	var s session
 	path, err := sessionPath()
