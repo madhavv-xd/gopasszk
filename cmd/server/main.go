@@ -26,7 +26,10 @@ func main() {
 	if err != nil{
 		log.Fatalf("error connecting to the db %v" , err)
 	}
-	cfg := config.LoadConfig()
+	cfg ,err := config.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
 	h := &handlers.Handler{DB: db , Secret:[]byte(cfg.ServerSecret) , JWTSecret: []byte(cfg.JWTSecret)} //handler has been created here 
 
 	router.GET("/health", func(c *gin.Context) {
