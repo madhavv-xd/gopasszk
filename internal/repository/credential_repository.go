@@ -56,3 +56,14 @@ func UpdateCredentialForUser(db *gorm.DB, id string , userID string , updated mo
 	}
 	return nil 
 }
+
+func SearchCredentialsByUser(db *gorm.DB , userID string , q string)([]models.Credential , error){
+	var creds []models.Credential
+	err := db.
+		Where("user_id = ? AND site_name ILIKE ?" , userID , "%"+q+"%").
+		Find(&creds).Error
+	if err != nil {
+		return nil , err 
+	}
+	return creds , nil 
+} //searching creds by the user 

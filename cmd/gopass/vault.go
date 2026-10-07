@@ -67,3 +67,28 @@ func decryptField(key []byte, encoded string) (string, error) {
 	}
 	return string(pt), nil
 }
+
+//findcredential -> fetches user's creds , finds one with this id ,
+//returns its site , deccrypted username and decypted password
+// findCredential fetches the user's credentials, finds the one with this ID,
+// and returns its site, decrypted username, and decrypted password.
+func findCredential(c *client.Client, key []byte, id string) (string, string, string, error) {
+	creds, err := c.ListCredentials()
+	if err != nil {
+		return "", "", "", err
+	}
+	for _, cr := range creds {
+		if cr.ID == id {
+			user, err := decryptField(key, cr.UsernameCiphertext)
+			if err != nil {
+				return "", "", "", err
+			}
+			pass, err := decryptField(key, cr.PasswordCiphertext)
+			if err != nil {
+				return "", "", "", err
+			}
+			return cr.SiteName, user, pass, nil
+		}
+	}
+	return "", "", "", errors.New("no credential with id " + id)
+}

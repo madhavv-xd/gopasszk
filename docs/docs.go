@@ -22,14 +22,22 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns all of the authenticated user's credentials, still encrypted.",
+                "description": "Returns the authenticated user's credentials, still encrypted. If q is given, only those whose site name contains q (case-insensitive).",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "credentials"
                 ],
-                "summary": "List credentials",
+                "summary": "List or search credentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search term for site name",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",

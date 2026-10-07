@@ -1,6 +1,9 @@
 package client
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
 
 type Credential struct {
 	ID                 string    `json:"id"`
@@ -28,6 +31,17 @@ func (c *Client) ListCredentials() ([]Credential, error) {
 		Credentials []Credential `json:"credentials"`
 	}
 	err := c.do("GET", "/credentials", nil, &resp)
+	return resp.Credentials, err
+}
+
+func (c *Client) SearchCredentials(q string) ([]Credential, error) {
+	params := url.Values{}
+	params.Set("q", q)
+
+	var resp struct {
+		Credentials []Credential `json:"credentials"`
+	}
+	err := c.do("GET", "/credentials?"+params.Encode(), nil, &resp)
 	return resp.Credentials, err
 }
 

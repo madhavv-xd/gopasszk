@@ -112,10 +112,11 @@ func(h *Handler) CreateCredential(c *gin.Context){
 }
 
 // ListCredentials godoc
-// @Summary      List credentials
-// @Description  Returns all of the authenticated user's credentials, still encrypted.
+// @Summary      List or search credentials
+// @Description  Returns the authenticated user's credentials, still encrypted. If q is given, only those whose site name contains q (case-insensitive).
 // @Tags         credentials
 // @Produce      json
+// @Param        q    query     string  false  "Search term for site name"
 // @Security     BearerAuth
 // @Success      200  {object}  map[string][]CredentialResponse
 // @Failure      401  {object}  map[string]string
@@ -127,9 +128,16 @@ func(h *Handler) ListCredentials(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError , gin.H{"error" : "internal server error"})
 		return 
 	}
-	creds , err := repository.ListCredentialsByUser(h.DB , userID) 
+	q := c.Query("q")
+	var creds []models.Credential
+	var err error  
+	if q == "" {
+		creds , err = repository.ListCredentialsByUser(h.DB , userID)
+	} else {
+		creds , err = repository.SearchCredentialsByUser(h.DB, userID , q)
+	}
 	if err != nil {
-		log.Printf("list credentials: %v" , err)
+		log.Printf("list credentials: %v" , err )
 		c.JSON(http.StatusInternalServerError , gin.H{"error":"internal server error"})
 		return 
 	}
