@@ -18,6 +18,9 @@ type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 	Salt     string `json:"salt" binding:"required,base64"`
 	AuthHash string `json:"auth_hash" binding:"required,base64"`
+	WrappedVaultKey    string `json:"wrapped_vault_key" binding:"required"`
+	RecoveryWrappedKey string `json:"recovery_wrapped_key" binding:"required"`
+	RecoveryAuthHash   string `json:"recovery_auth_hash" binding:"required"`	
 }
 
 
@@ -58,6 +61,21 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "authhash length isnt appropriate"})
 		return
 	}
+		wrappedVK, err := base64.StdEncoding.DecodeString(req.WrappedVaultKey)
+	if err != nil || len(wrappedVK) != 60 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wrapped vault key"})
+		return
+	}
+	recoveryWrapped, err := base64.StdEncoding.DecodeString(req.RecoveryWrappedKey)
+	if err != nil || len(recoveryWrapped) != 60 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid recovery wrapped key"})
+		return
+	}
+	recoveryAuth, err := base64.StdEncoding.DecodeString(req.RecoveryAuthHash)
+	if err != nil || len(recoveryAuth) != 32 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid recovery auth hash"})
+		return
+	}
 
 	phc, err := auth.HashAuthKey(authHash)
 	if err != nil {
@@ -65,11 +83,19 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "server failed to generate the phc string"})
 		return
 	}
-
-	user := models.User{
-		Email:    req.Email,
-		Salt:     saltDecoded,
-		AuthHash: phc,
+	recoveryPHC, err := auth.HashAuthKey(recoveryAuth)
+	if err != nil {
+		log.Printf("hashing recovery auth failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
+	}
+		user := models.User{
+		Email:              req.Email,
+		Salt:               saltDecoded,
+		AuthHash:           phc,
+		WrappedVaultKey:    wrappedVK,
+		RecoveryWrappedKey: recoveryWrapped,
+		RecoveryAuthHash:   recoveryPHC,
 	}
 
 	err = repository.CreateUser(h.DB, &user)

@@ -39,7 +39,10 @@ func main() {
 	router.POST("/register", h.Register)
 	router.GET("/salt" , h.GetSalt)
 	router.POST("/login" , h.Login)
+	router.POST("/recover/key", h.RecoverKey)
+	router.POST("/recover/reset", h.RecoverReset)
 	router.GET("/me" , middleware.RequireAuth(h.JWTSecret) , h.Me)
+	router.PUT("/me/password", middleware.RequireAuth(h.JWTSecret), h.ChangePassword)
 	creds := router.Group("/credentials")
 	creds.Use(middleware.RequireAuth(h.JWTSecret))
 	{	

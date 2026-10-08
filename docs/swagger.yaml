@@ -1,5 +1,21 @@
 basePath: /
 definitions:
+  handlers.ChangePasswordRequest:
+    properties:
+      new_auth_hash:
+        type: string
+      new_salt:
+        type: string
+      new_wrapped_vault_key:
+        type: string
+      old_auth_hash:
+        type: string
+    required:
+    - new_auth_hash
+    - new_salt
+    - new_wrapped_vault_key
+    - old_auth_hash
+    type: object
   handlers.CredentialRequest:
     properties:
       password_ciphertext:
@@ -39,18 +55,56 @@ definitions:
     - auth_hash
     - email
     type: object
+  handlers.RecoverKeyRequest:
+    properties:
+      email:
+        type: string
+      recovery_auth_hash:
+        type: string
+    required:
+    - email
+    - recovery_auth_hash
+    type: object
+  handlers.RecoverResetRequest:
+    properties:
+      email:
+        type: string
+      new_auth_hash:
+        type: string
+      new_salt:
+        type: string
+      new_wrapped_vault_key:
+        type: string
+      recovery_auth_hash:
+        type: string
+    required:
+    - email
+    - new_auth_hash
+    - new_salt
+    - new_wrapped_vault_key
+    - recovery_auth_hash
+    type: object
   handlers.RegisterRequest:
     properties:
       auth_hash:
         type: string
       email:
         type: string
+      recovery_auth_hash:
+        type: string
+      recovery_wrapped_key:
+        type: string
       salt:
+        type: string
+      wrapped_vault_key:
         type: string
     required:
     - auth_hash
     - email
+    - recovery_auth_hash
+    - recovery_wrapped_key
     - salt
+    - wrapped_vault_key
     type: object
 host: localhost:8080
 info:
@@ -294,6 +348,115 @@ paths:
       security:
       - BearerAuth: []
       summary: Current user
+      tags:
+      - auth
+  /me/password:
+    put:
+      consumes:
+      - application/json
+      description: Verifies the old auth hash, then stores a new salt, auth hash,
+        and re-wrapped vault key. Credentials are untouched.
+      parameters:
+      - description: Old auth hash plus new salt (16), auth hash (32), wrapped vault
+          key (60), all base64
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.ChangePasswordRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Change master password
+      tags:
+      - auth
+  /recover/key:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the recovery auth hash and returns the recovery-wrapped
+        vault key.
+      parameters:
+      - description: Email and recovery auth hash (base64, 32 bytes)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RecoverKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Start account recovery
+      tags:
+      - auth
+  /recover/reset:
+    post:
+      consumes:
+      - application/json
+      description: Verifies the recovery auth hash again, then sets a new salt, auth
+        hash, and password-wrapped vault key.
+      parameters:
+      - description: Email, recovery auth hash, new salt (16), new auth hash (32),
+          new wrapped vault key (60)
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RecoverResetRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Finish account recovery
       tags:
       - auth
   /register:

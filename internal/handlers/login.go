@@ -16,7 +16,7 @@ import (
 const dummyHash = "$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHR2YWx1ZQ$ZmFrZWhhc2hvdXRwdXR2YWx1ZWhlcmU"
 
 type LoginRequest struct {
-	Email string `json:"email" binding:"required,email"`
+	Email    string `json:"email" binding:"required,email"`
 	AuthHash string `json:"auth_hash" binding:"required,base64"`
 }
 
@@ -47,36 +47,39 @@ func (h *Handler) Login(c *gin.Context) {
 
 	user, err := repository.GetUserByEmail(h.DB, req.Email)
 	//error handling should be proper here , also convers the db outages
-	var hashToCheck string 
-	userFound := false 
-	switch{
+	var hashToCheck string
+	userFound := false
+	switch {
 	case err == nil:
 		hashToCheck = user.AuthHash
-		userFound=true 
-	case errors.Is(err , gorm.ErrRecordNotFound):
+		userFound = true
+	case errors.Is(err, gorm.ErrRecordNotFound):
 		hashToCheck = dummyHash
 	default:
-	log.Printf("login: user lookup failed: %v" , err)
-	c.JSON(http.StatusInternalServerError , gin.H{"error":"database isnt responding"})
-	return
+		log.Printf("login: user lookup failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "database isnt responding"})
+		return
 	}
-	
-	match, err := auth.VerifyAuthKey(authHash, hashToCheck )
+
+	match, err := auth.VerifyAuthKey(authHash, hashToCheck)
 	if err != nil || !match {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
 		return
 	}
 
 	if !match || !userFound {
-		c.JSON(http.StatusUnauthorized , gin.H{"error":"not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "not found"})
 		return
 	}
 
-	token , err := auth.IssueToken(user.ID , h.JWTSecret , 24*time.Hour)
+	token, err := auth.IssueToken(user.ID, h.JWTSecret, 24*time.Hour)
 	if err != nil {
-		log.Printf("issue token failed: %v" , err)
-		c.JSON(http.StatusInternalServerError , gin.H{"error":"internal error"})
+		log.Printf("issue token failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"token": token}) // placeholder until Step 5 (JWT)
+	c.JSON(http.StatusOK, gin.H{
+		"token":             token,
+		"wrapped_vault_key": base64.StdEncoding.EncodeToString(user.WrappedVaultKey),
+	})
 }

@@ -4,6 +4,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"errors"
+
 	"golang.org/x/crypto/argon2"
 )
 
@@ -87,4 +89,44 @@ func Decrypt(key []byte, nonce []byte, ciphertext []byte) (plaintext []byte, err
 		return nil, err
 	}
 	return plaintext, nil
+}
+
+const vaultKeySize = 32
+
+// GenerateVaultKey returns a fresh random 256-bit key for encrypting credentials.
+func GenerateVaultKey() ([]byte, error) {
+	key := make([]byte, vaultKeySize)
+	if _, err := rand.Read(key); err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+// WrapKey encrypts a key with another key (the "key-encryption key").
+// Returns nonce || ciphertext.
+func WrapKey(kek, key []byte) ([]byte, error) {
+	nonce, ct, err := Encrypt(kek, key)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]byte, 0, len(nonce)+len(ct))
+	out = append(out, nonce...)
+	out = append(out, ct...)
+	return out, nil
+}
+
+// UnwrapKey reverses WrapKey. Fails if kek is wrong or the data was tampered with.
+func UnwrapKey(kek, wrapped []byte) ([]byte, error) {
+	const nonceSize = 12
+	if len(wrapped) < nonceSize {
+		return nil, errors.New("wrapped key too short")
+	}
+	key, err := Decrypt(kek, wrapped[:nonceSize], wrapped[nonceSize:])
+	if err != nil {
+		return nil, err
+	}
+	if len(key) != vaultKeySize {
+		return nil, errors.New("unwrapped key has wrong length")
+	}
+	return key, nil
 }

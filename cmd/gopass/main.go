@@ -50,6 +50,12 @@ func main() {
 		err = runCopy(args)
 	case "search":
 		err = runSearch(args)
+	case "audit":
+		err = runAudit(args)
+	case "passwd":
+		err = runPasswd(args)
+	case "recover":
+		err = runRecover(args)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n\n", cmd)
 		usage()
@@ -65,18 +71,26 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage: gopass <command>
 
-commands:
-  register        create an account
+account:
+  register        create an account (shows your recovery phrase once)
   login           log in and save a session token
+  logout          clear the saved session
+  passwd          change your master password
+  recover         reset a forgotten master password with your recovery phrase
+
+credentials:
   add             add a credential
   list            list your credentials (site and ID only)
+  search <term>   find credentials by site name
   show <id>       show one credential, decrypted
-  generate [len]  generate a random password (default 20)
+  copy <id>       copy a password to the clipboard (clears after 30s)
   edit <id>       change a credential
   delete <id>     delete a credential
-  logout          clear the saved session
-  help            show this help
-  `)
+
+tools:
+  generate [len]  generate a random password (default 20)
+  audit           check for weak, reused, and breached passwords
+  help            show this help`)
 }
 
 func runRegister(args []string) error {
@@ -96,23 +110,56 @@ func runRegister(args []string) error {
 		return errors.New("passwords don't match")
 	}
 
-	salt, err := crypto.GenerateSalt()
+		salt, err := crypto.GenerateSalt()
 	if err != nil {
 		return err
 	}
 	authHash := crypto.DeriveAuthHash(pw, salt)
+	pwKey := crypto.DeriveEncryptionKey(pw, salt)
 
-	u , err := serverURL()
+	vaultKey, err := crypto.GenerateVaultKey()
 	if err != nil {
-		return err 
-	}
-	c := client.New(u)
-	if err := c.Register(email, salt, authHash); err != nil {
 		return err
 	}
-	fmt.Println("Registered. Now run: gopass login")
+	wrappedVK, err := crypto.WrapKey(pwKey, vaultKey)
+	if err != nil {
+		return err
+	}
+
+	phrase, err := crypto.NewRecoveryPhrase()
+	if err != nil {
+		return err
+	}
+	recWrapKey, recAuth, err := crypto.DeriveRecoveryKeys(phrase)
+	if err != nil {
+		return err
+	}
+	recWrapped, err := crypto.WrapKey(recWrapKey, vaultKey)
+	if err != nil {
+		return err
+	}
+
+	u, err := serverURL()
+	if err != nil {
+		return err
+	}
+	c := client.New(u)
+	if err := c.Register(email, salt, authHash, wrappedVK, recWrapped, recAuth); err != nil {
+		return err
+	}
+
+	fmt.Println("Registered.")
+	fmt.Println()
+	fmt.Println("RECOVERY PHRASE: write this down and keep it somewhere safe.")
+	fmt.Println("It's the ONLY way back in if you forget your master password.")
+	fmt.Println("It will not be shown again.")
+	fmt.Println()
+	fmt.Println(phrase)
+	fmt.Println()
+	fmt.Println("Now run: gopass login")
 	return nil
 }
+
 
 func runLogin(args []string) error {
 	email, err := promptLine("Email: ")
@@ -135,7 +182,7 @@ func runLogin(args []string) error {
 	}
 	authHash := crypto.DeriveAuthHash(pw, salt)
 
-	token, err := c.Login(email, authHash)
+	token, _ ,err := c.Login(email, authHash)
 	if err != nil {
 		return err
 	}
@@ -434,5 +481,195 @@ func runSearch(args []string) error {
 	for _, cr := range creds {
 		fmt.Printf("%s  %s\n", cr.ID, cr.SiteName)
 	}
+	return nil
+}
+
+func runAudit(args []string) error {
+	c, key, err := unlock()
+	if err != nil {
+		return err
+	}
+	creds , err := c.ListCredentials()
+	if err != nil {
+		return  err 
+	}
+	if len(creds) == 0 {
+		fmt.Println("No credentials yet.")
+		return  nil 
+	}
+	//now loop and put the weak creds inside the array and make map for password -> site 
+	var weak []string 
+	var breached []string //for inserting the breached passes 
+	seen := map[string][]string{}
+
+	for _ , cr := range creds {
+		pass , err := decryptField(key , cr.PasswordCiphertext)
+		if err != nil {
+			return err 
+		}
+		if isWeak(pass) {
+			weak = append(weak , cr.SiteName)
+		}
+		if n , err := pwnedCount(pass); err != nil {
+			fmt.Println("warning: breach check failed for" , cr.SiteName+":" , err)
+		} else if n >0 {
+			breached = append(breached, fmt.Sprintf("%s (seen %d times)" , cr.SiteName , n))
+		} 
+		seen[pass] = append(seen[pass], cr.SiteName)
+	}
+	issues := 0
+	if len(weak) > 0 {
+		fmt.Println("weak passwords : ")
+		for _ , site := range weak {
+			fmt.Println(" -",site)
+		}
+		issues += len(weak)
+	}
+	if len(breached) > 0 {
+		fmt.Println("Breached passwords:")
+		for _ , entry := range breached {
+			fmt.Println(" -" , entry)
+		}
+		issues += len(breached)
+	}
+	for _, sites := range seen {
+		if len(sites) > 1 {
+			fmt.Println("Reused across:", strings.Join(sites, ", "))
+			issues++
+		}
+	}
+
+	if issues == 0 {
+		fmt.Println("No issues found.")
+	}
+	return nil
+}
+
+func runPasswd(args []string) error {
+	s, err := loadSession()
+	if err != nil {
+		return err
+	}
+	oldPw, err := promptPassword("Current master password: ")
+	if err != nil {
+		return err
+	}
+
+	u, err := serverURL()
+	if err != nil {
+		return err
+	}
+	c := client.New(u)
+	salt, err := c.GetSalt(s.Email)
+	if err != nil {
+		return err
+	}
+
+	// 1. Unlock with the old password to get the vault key.
+	oldAuth := crypto.DeriveAuthHash(oldPw, salt)
+	token, wrappedVK, err := c.Login(s.Email, oldAuth)
+	if err != nil {
+		return errors.New("wrong master password")
+	}
+	c.Token = token
+	vaultKey, err := crypto.UnwrapKey(crypto.DeriveEncryptionKey(oldPw, salt), wrappedVK)
+	if err != nil {
+		return errors.New("could not unlock vault")
+	}
+
+	// 2. Ask for the new password.
+	newPw, err := promptPassword("New master password: ")
+	if err != nil {
+		return err
+	}
+	confirm, err := promptPassword("Confirm new password: ")
+	if err != nil {
+		return err
+	}
+	if string(newPw) != string(confirm) {
+		return errors.New("passwords don't match")
+	}
+
+	// 3. New salt, new auth hash, rewrap the SAME vault key.
+	newSalt, err := crypto.GenerateSalt()
+	if err != nil {
+		return err
+	}
+	newAuth := crypto.DeriveAuthHash(newPw, newSalt)
+	newWrapped, err := crypto.WrapKey(crypto.DeriveEncryptionKey(newPw, newSalt), vaultKey)
+	if err != nil {
+		return err
+	}
+
+	if err := c.ChangePassword(oldAuth, newSalt, newAuth, newWrapped); err != nil {
+		return err
+	}
+	if err := saveSession(session{Email: s.Email, Token: token}); err != nil {
+		return err
+	}
+	fmt.Println("Password changed.")
+	return nil
+}
+
+func runRecover(args []string) error {
+	email, err := promptLine("Email: ")
+	if err != nil {
+		return err
+	}
+	phraseBytes, err := promptPassword("Recovery phrase (24 words, hidden): ")
+	if err != nil {
+		return err
+	}
+
+	// 1. Phrase -> recovery wrap key + recovery auth hash.
+	recWrapKey, recAuth, err := crypto.DeriveRecoveryKeys(string(phraseBytes))
+	if err != nil {
+		return errors.New("invalid recovery phrase (check the words and spelling)")
+	}
+
+	u, err := serverURL()
+	if err != nil {
+		return err
+	}
+	c := client.New(u)
+
+	// 2. Prove we have the phrase, get the recovery-wrapped vault key, unwrap it.
+	recWrapped, err := c.RecoverKey(email, recAuth)
+	if err != nil {
+		return errors.New("wrong email or recovery phrase")
+	}
+	vaultKey, err := crypto.UnwrapKey(recWrapKey, recWrapped)
+	if err != nil {
+		return errors.New("could not unlock vault with this phrase")
+	}
+
+	// 3. Choose a new password and rewrap the same vault key.
+	newPw, err := promptPassword("New master password: ")
+	if err != nil {
+		return err
+	}
+	confirm, err := promptPassword("Confirm new password: ")
+	if err != nil {
+		return err
+	}
+	if string(newPw) != string(confirm) {
+		return errors.New("passwords don't match")
+	}
+
+	newSalt, err := crypto.GenerateSalt()
+	if err != nil {
+		return err
+	}
+	newAuth := crypto.DeriveAuthHash(newPw, newSalt)
+	newWrapped, err := crypto.WrapKey(crypto.DeriveEncryptionKey(newPw, newSalt), vaultKey)
+	if err != nil {
+		return err
+	}
+
+	if err := c.RecoverReset(email, recAuth, newSalt, newAuth, newWrapped); err != nil {
+		return err
+	}
+	fmt.Println("Password reset. Your recovery phrase still works.")
+	fmt.Println("Now run: gopass login")
 	return nil
 }

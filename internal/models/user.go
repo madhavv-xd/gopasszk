@@ -12,4 +12,7 @@ type User struct {
 	AuthHash  string
 	CreatedAt time.Time
 	UpdatedAt time.Time
+	WrappedVaultKey    []byte `gorm:"type:bytea;not null"`
+	RecoveryWrappedKey []byte `gorm:"type:bytea;not null"`
+	RecoveryAuthHash   string `gorm:"not null"`
 }

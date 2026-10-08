@@ -22,9 +22,9 @@ func unlock() (*client.Client, []byte, error) {
 		return nil, nil, err
 	}
 
-	u , err := serverURL()
+	u, err := serverURL()
 	if err != nil {
-		return nil , nil , err
+		return nil, nil, err
 	}
 	c := client.New(u)
 	salt, err := c.GetSalt(s.Email)
@@ -32,16 +32,19 @@ func unlock() (*client.Client, []byte, error) {
 		return nil, nil, err
 	}
 
-	token, err := c.Login(s.Email, crypto.DeriveAuthHash(pw, salt))
+	token, wrappedVK, err := c.Login(s.Email, crypto.DeriveAuthHash(pw, salt))
 	if err != nil {
 		return nil, nil, errors.New("wrong master password")
 	}
 	c.Token = token
 
-	key := crypto.DeriveEncryptionKey(pw, salt)
+	pwKey := crypto.DeriveEncryptionKey(pw, salt)
+	key, err := crypto.UnwrapKey(pwKey, wrappedVK)
+	if err != nil {
+		return nil, nil, errors.New("could not unlock vault")
+	}
 	return c, key, nil
 }
-
 func encryptField(key []byte, plaintext string) (string, error) {
 	nonce, ct, err := crypto.Encrypt(key, []byte(plaintext))
 	if err != nil {

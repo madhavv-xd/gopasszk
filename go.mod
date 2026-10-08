@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/alexedwards/argon2id v1.0.0
+	github.com/atotto/clipboard v0.1.4
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
@@ -11,6 +12,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
+	github.com/tyler-smith/go-bip39 v1.1.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/term v0.46.0
 	gorm.io/driver/postgres v1.6.3
@@ -21,7 +23,6 @@ require (
 	github.com/KyleBanks/depth v1.2.1 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
-	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
 	github.com/bytedance/sonic/loader v0.5.0 // indirect
