@@ -14,16 +14,24 @@ import (
 	"gorm.io/gorm"
 )
 
+func b64(n int) string { return base64.StdEncoding.EncodeToString(make([]byte, n)) }
+
+// validPayload is a fully valid register body; tests override one field to hit one check.
+func validPayload(email string) map[string]string {
+	return map[string]string{
+		"email":                email,
+		"salt":                 b64(16),
+		"auth_hash":            b64(32),
+		"wrapped_vault_key":    b64(60),
+		"recovery_wrapped_key": b64(60),
+		"recovery_auth_hash":   b64(32),
+	}
+}
+
 func TestRegisterSuccess(t *testing.T) {
-	salt := make([]byte, 16)
-	authHash := make([]byte, 32)
 	router , db := setupRouter(t)
 	defer cleanupUser(t , db , "handler-success@example.com")
-	payload := map[string]string{
-		"email":     "handler-success@example.com",
-		"salt":     base64.StdEncoding.EncodeToString(salt),
-		"auth_hash": base64.StdEncoding.EncodeToString(authHash),
-	}
+	payload := validPayload("handler-success@example.com")
 	w := postRegister(t , router , payload)
 	if w.Code != http.StatusCreated {
 		t.Errorf("expected 201 , got %d: %s" , w.Code , w.Body.String())
@@ -75,15 +83,10 @@ func postRegister(t *testing.T , router *gin.Engine , payload map[string]string)
 }
 
 func TestRegisterWrongSaltLength(t *testing.T) {
-	salt := make([]byte, 3)
-	authHash := make([]byte, 32)
 	router , db := setupRouter(t)
 	defer cleanupUser(t , db , "handler-success2@example.com")
-	payload := map[string]string{
-		"email":     "handler-success2@example.com",
-		"salt":     base64.StdEncoding.EncodeToString(salt),
-		"auth_hash": base64.StdEncoding.EncodeToString(authHash),
-	}
+	payload := validPayload("handler-success2@example.com")
+	payload["salt"] = b64(3)
 	w := postRegister(t , router , payload)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
@@ -91,15 +94,10 @@ func TestRegisterWrongSaltLength(t *testing.T) {
 }
 
 func TestRegisterWrongAuthHashLength(t *testing.T) {
-	salt := make([]byte, 16)
-	authHash := make([]byte, 3)
 	router , db := setupRouter(t)
 	defer cleanupUser(t , db , "handler-success3@example.com")
-	payload := map[string]string{
-		"email":     "handler-success3@example.com",
-		"salt":     base64.StdEncoding.EncodeToString(salt),
-		"auth_hash": base64.StdEncoding.EncodeToString(authHash),
-	}
+	payload := validPayload("handler-success3@example.com")
+	payload["auth_hash"] = b64(3)
 	w := postRegister(t , router , payload)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
@@ -107,14 +105,10 @@ func TestRegisterWrongAuthHashLength(t *testing.T) {
 }
 
 func TestRegisterMissingEmail(t *testing.T) {
-	salt := make([]byte, 16)
-	authHash := make([]byte, 32)
 	router , db := setupRouter(t)
 	defer cleanupUser(t , db , "")
-	payload := map[string]string{
-		"salt":     base64.StdEncoding.EncodeToString(salt),
-		"auth_hash": base64.StdEncoding.EncodeToString(authHash),
-	}
+	payload := validPayload("")
+	delete(payload, "email")
 	w := postRegister(t , router , payload)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
@@ -122,14 +116,9 @@ func TestRegisterMissingEmail(t *testing.T) {
 }
 
 func TestRegisterBadBase64(t *testing.T) {
-	salt := "not b64"
-	authHash := make([]byte, 32)
 	router , _:= setupRouter(t)
-		payload := map[string]string{
-		"email":     "handler-success3@example.com" ,
-		"salt":     salt,
-		"auth_hash": base64.StdEncoding.EncodeToString(authHash),
-	}
+	payload := validPayload("handler-success3@example.com")
+	payload["salt"] = "not b64"
 	w := postRegister(t , router , payload)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
@@ -137,15 +126,9 @@ func TestRegisterBadBase64(t *testing.T) {
 }
 
 func TestRegisterSuccessDupe(t *testing.T) {
-	salt := make([]byte, 16)
-	authHash := make([]byte, 32)
 	router , db := setupRouter(t)
 	defer cleanupUser(t , db , "handler-success5@example.com")
-	payload := map[string]string{
-		"email":     "handler-success5@example.com",
-		"salt":     base64.StdEncoding.EncodeToString(salt),
-		"auth_hash": base64.StdEncoding.EncodeToString(authHash),
-	}
+	payload := validPayload("handler-success5@example.com")
 	w := postRegister(t , router , payload)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201 , got %d: %s" , w.Code , w.Body.String())
@@ -153,5 +136,15 @@ func TestRegisterSuccessDupe(t *testing.T) {
 	w2 := postRegister(t , router , payload)
 	if w2.Code != http.StatusConflict {
 		t.Errorf("expected 409 , got %d: %s" , w.Code , w.Body.String())
+	}
+}
+func TestRegisterWrongWrappedKeyLengths(t *testing.T) {
+	router, _ := setupRouter(t)
+	for _, field := range []string{"wrapped_vault_key", "recovery_wrapped_key", "recovery_auth_hash"} {
+		payload := validPayload("handler-wrapped@example.com")
+		payload[field] = b64(3)
+		if w := postRegister(t, router, payload); w.Code != http.StatusBadRequest {
+			t.Errorf("%s: expected 400, got %d: %s", field, w.Code, w.Body.String())
+		}
 	}
 }

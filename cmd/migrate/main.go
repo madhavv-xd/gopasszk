@@ -16,7 +16,7 @@ func main() {
 	}
 	err = db.AutoMigrate(&models.User{}, &models.Credential{})
 	if err != nil {
-		log.Fatal("migration failed: %v" , err)
+		log.Fatalf("migration failed: %v" , err)
 		return
 	}
 	fmt.Println("migration successful")

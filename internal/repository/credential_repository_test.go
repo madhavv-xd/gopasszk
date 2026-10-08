@@ -44,6 +44,7 @@ func TestCredentialsByFidelity(t *testing.T) {
 		Email:    "madhav@gmail.com",
 		AuthHash: "placeholder-auth-hash",
 		Salt:     salt,
+		WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash",
 	}
 
 	err = repository.CreateUser(db, &user)
@@ -103,6 +104,7 @@ func TestSaltByFidelity(t *testing.T) {
 		Email:    "mega@gmail.com",
 		AuthHash: "sample-auth-hash",
 		Salt:     testSalt,
+		WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash",
 	}
 
 	err = repository.CreateUser(db, &user)
@@ -137,8 +139,8 @@ func TestCrossUserCredentialAccess(t *testing.T) {
 	} // however your Phase 3 tests get their DB connection
 
 	// Two users. Emails must be unique across test runs; see note below.
-	alice := models.User{Email: "alice@test.com", AuthHash: "test-hash", Salt: []byte("0123456789abcdef")}
-	bob := models.User{Email: "bob@test.com", AuthHash: "test-hash", Salt: []byte("fedcba9876543210")}
+	alice := models.User{Email: "alice@test.com", AuthHash: "test-hash", Salt: []byte("0123456789abcdef"), WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash"}
+	bob := models.User{Email: "bob@test.com", AuthHash: "test-hash", Salt: []byte("fedcba9876543210"), WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash"}
 	if err := repository.CreateUser(db, &alice); err != nil {
 		t.Fatalf("create alice: %v", err)
 	}
@@ -193,3 +195,4 @@ func TestCrossUserCredentialAccess(t *testing.T) {
 		t.Fatalf("alice's credential was modified: %+v", got)
 	}
 }
+var key60 = make([]byte, 60) // placeholder wrapped key (nonce 12 + key 32 + tag 16)

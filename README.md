@@ -8,6 +8,7 @@ Your master password never leaves your machine. The server stores only an Argon2
 
 - [Architecture](#architecture)
 - [Crypto and auth flow](#crypto-and-auth-flow)
+- [Database](#database)
 - [Project structure](#project-structure)
 - [Quick start](#quick-start)
 - [Install the CLI](#install-the-cli)
@@ -26,7 +27,7 @@ Your master password never leaves your machine. The server stores only an Argon2
 │   ├─ Argon2id(salt|auth) ┼─► auth hash ────► │   └─ middleware (JWT)    │      │ credentials│
 │   └─ Argon2id(salt|enc)  │   (sent)          │       └─ repository      │      │            │
 │        └─ AES-256-GCM    ┼─► ciphertext ───► │  re-hashes auth hash     │      │ hash + blob│
-│  encryption key: local   │   (opaque)        │  never sees the key      │      │ only       │
+│  vault key: local only   │   (opaque)        │  never sees the key      │      │ only       │
 └──────────────────────────┘                   └──────────────────────────┘      └────────────┘
 ```
 
@@ -42,24 +43,41 @@ Your master password never leaves your machine. The server stores only an Argon2
 
 ## Crypto and auth flow
 
-The client derives **two independent 32-byte Argon2id keys** from the master password and a random 16-byte per-user salt:
+The client never uses the master password directly as the vault key. Instead there is a random **vault key** that encrypts all credentials, and that key is stored on the server *wrapped* (encrypted) two ways:
 
-| Key | Input | Used for | Leaves the client? |
+| Value | Derived from | Used for | Leaves the client? |
 |---|---|---|---|
-| Auth hash | `salt ‖ "auth"` | Proving identity at login | Yes |
-| Encryption key | `salt ‖ "enc"` | AES-256-GCM encrypt/decrypt of vault entries | **Never** |
+| Auth hash | Argon2id(`salt ‖ "auth"`) | Proving identity at login | Yes (server hashes it again) |
+| Password key | Argon2id(`salt ‖ "enc"`) | Wraps/unwraps the vault key | **Never** |
+| Vault key | Random 32 bytes | AES-256-GCM encrypt/decrypt of credentials | **Never** (only wrapped) |
+| Recovery wrap key + recovery auth hash | HKDF of the 24-word recovery phrase | Wraps the vault key a second way; proves you hold the phrase | Auth hash only |
 
-**Register:** client generates salt, derives the auth hash, `POST /register {email, salt, auth_hash}`. The server hashes the auth hash again with Argon2id (PHC string) and stores it.
+**Register:** client generates a salt, vault key and 24-word BIP-39 recovery phrase. It sends `{email, salt, auth_hash, wrapped_vault_key, recovery_wrapped_key, recovery_auth_hash}`. The phrase is shown once and never sent. The server re-hashes the auth hashes with Argon2id (PHC string) and stores them.
 
-**Login:** client `GET /salt?email=...`, re-derives the auth hash, `POST /login`. The server verifies and returns an HS256 JWT (24h, `user_id` claim).
+**Login:** client `GET /salt?email=...`, re-derives the auth hash, `POST /login`. The server verifies and returns an HS256 JWT (24h, `user_id` claim) plus the wrapped vault key, which the client unwraps with the password key.
 
-**Vault entries:** username and password are encrypted client-side. Wire format is `base64(nonce[12] ‖ ciphertext+tag)`. The server only checks the decoded length (28–4096 bytes).
+**Change password (`passwd`):** vault key is re-wrapped under a new password key with a new salt. Credentials are untouched.
+
+**Forgot password (`recover`):** the recovery phrase proves identity (`POST /recover/key`), the client unwraps the vault key with it, then re-wraps under a new password (`POST /recover/reset`). Your existing recovery phrase keeps working. **Lose both the password and the phrase and the data is unrecoverable by design.**
+
+**Vault entries:** username and password are encrypted client-side. Wire format is `base64(nonce[12] ‖ ciphertext+tag)`. The server only checks the decoded length (28-4096 bytes).
 
 **Anti-enumeration:**
 - `GET /salt` for an unknown email returns a deterministic fake salt, `HMAC-SHA256(SALT_HMAC_SECRET, email)[:16]`.
 - `POST /login` for an unknown email still runs an Argon2 verify against a dummy hash and returns the same 401.
 
 **Ownership:** the credential owner always comes from the JWT, never the request body. Every credential query is scoped by `id AND user_id`; another user's row looks the same as a missing one (404).
+
+## Database
+
+PostgreSQL 16, run locally by `docker-compose.yml` (service `db`, port 5432, named volume `pgdata` so data survives restarts). Credentials come from the same `.env`. Schema is created by `go run ./cmd/migrate` (GORM AutoMigrate, the only schema mechanism).
+
+| Table | Columns of note |
+|---|---|
+| `users` | `id` (uuid), `email` (unique), `salt`, `auth_hash`, `wrapped_vault_key`, `recovery_wrapped_key`, `recovery_auth_hash` |
+| `credentials` | `id`, `user_id`, `site_name`, `username_ciphertext`, `password_ciphertext` |
+
+Everything sensitive is a hash or ciphertext. There is no `ON DELETE CASCADE` on `credentials.user_id`.
 
 ## Project structure
 
@@ -79,6 +97,7 @@ internal/
   handlers/    HTTP handlers
   middleware/  JWT auth middleware
   models/      GORM models
+  pwgn/        random password generator
   repository/  DB queries
 docs/          Swagger (generated by swag, do not hand-edit)
 docker-compose.yml
@@ -139,15 +158,31 @@ GOPASS_SERVER=https://vault.example.com gopass login
 ## Using the CLI
 
 ```sh
-gopass register        # create an account (prompts for email + master password)
+# account
+gopass register        # create an account; shows your 24-word recovery phrase ONCE
 gopass login           # authenticate, saves a session token
-gopass add             # add a credential (site, username, password)
-gopass list            # list and decrypt your credentials
+gopass logout          # clear the saved session
+gopass passwd          # change your master password
+gopass recover         # reset a forgotten master password with the recovery phrase
+
+# credentials
+gopass add             # add a credential (can generate a password for you)
+gopass list            # list site names and IDs
+gopass search <term>   # find credentials by site name
+gopass show <id>       # show one credential, decrypted
+gopass copy <id>       # copy password to clipboard, cleared after 30s
 gopass edit <id>       # update a credential
 gopass delete <id>     # delete a credential
-gopass logout          # clear the saved session
+
+# tools
+gopass generate [len]  # random password (default 20)
+gopass audit           # flag weak, reused and breached passwords
 gopass help
 ```
+
+Typical first run: `gopass register` -> write down the phrase -> `gopass login` -> `gopass add`.
+
+`audit` checks breaches via haveibeenpwned using k-anonymity: only the first 5 characters of each password's SHA-1 are sent.
 
 - The session is stored at `os.UserConfigDir()/gopass/session.json` as `{email, token}`.
 - Every vault command except `delete` re-prompts for the master password, re-logs in for a fresh token, and derives the encryption key locally. The key is never persisted.
@@ -159,9 +194,12 @@ Interactive docs live at `/swagger/index.html`.
 | Method | Path | Auth | Description |
 |---|---|---|---|
 | GET | `/health` | no | Liveness check |
-| POST | `/register` | no | `{email, salt, auth_hash}`; 409 if the email exists |
+| POST | `/register` | no | Email, salt, auth hash, wrapped keys, recovery auth hash; 409 if the email exists |
 | GET | `/salt?email=` | no | Real or deterministic fake salt |
-| POST | `/login` | no | `{email, auth_hash}`; returns JWT |
+| POST | `/login` | no | `{email, auth_hash}`; returns JWT and wrapped vault key |
+| POST | `/recover/key` | no | `{email, recovery_auth_hash}`; returns recovery-wrapped vault key |
+| POST | `/recover/reset` | no | Set a new salt, auth hash and wrapped key using the recovery proof |
+| PUT | `/me/password` | Bearer | Change master password (old auth hash + new salt/hash/wrapped key) |
 | GET | `/me` | Bearer | Current user |
 | POST | `/credentials` | Bearer | `{site_name, username_ciphertext, password_ciphertext}` |
 | GET | `/credentials` | Bearer | List your credentials |

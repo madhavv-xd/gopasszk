@@ -26,6 +26,7 @@ func TestGetSaltForEmail(t *testing.T) {
 		Email:    "megaxx@gmail.com",
 		AuthHash: "sample-auth-hash",
 		Salt:     testSalt,
+		WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash",
 	}
 
 	err = repository.CreateUser(db, &user)
@@ -76,3 +77,4 @@ func TestGetSaltForEmail(t *testing.T) {
 	}
 	
 }
+var key60 = make([]byte, 60) // placeholder wrapped key (nonce 12 + key 32 + tag 16)
