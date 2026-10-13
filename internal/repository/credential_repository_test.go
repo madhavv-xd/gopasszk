@@ -41,9 +41,9 @@ func TestCredentialsByFidelity(t *testing.T) {
 	encodedCipherText := base64.StdEncoding.EncodeToString(combined)
 
 	user := models.User{
-		Email:    "madhav@gmail.com",
-		AuthHash: "placeholder-auth-hash",
-		Salt:     salt,
+		Email:           "madhav@gmail.com",
+		AuthHash:        "placeholder-auth-hash",
+		Salt:            salt,
 		WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash",
 	}
 
@@ -71,13 +71,13 @@ func TestCredentialsByFidelity(t *testing.T) {
 	}
 
 	defer func() {
-		err := repository.DeleteCredential(db, credential.ID , user.ID)
+		err := repository.DeleteCredential(db, credential.ID, user.ID)
 		if err != nil {
 			t.Errorf("failed to cleanup the test credential %v", err)
 		}
 	}()
 
-	retreived, err := repository.GetCredentialById(db, credential.ID , user.ID)
+	retreived, err := repository.GetCredentialById(db, credential.ID, user.ID)
 	if err != nil {
 		t.Fatalf("error retreiving credential: %v", err)
 	}
@@ -101,9 +101,9 @@ func TestSaltByFidelity(t *testing.T) {
 	}
 
 	user := models.User{
-		Email:    "mega@gmail.com",
-		AuthHash: "sample-auth-hash",
-		Salt:     testSalt,
+		Email:           "mega@gmail.com",
+		AuthHash:        "sample-auth-hash",
+		Salt:            testSalt,
 		WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash",
 	}
 
@@ -145,19 +145,19 @@ func TestCrossUserCredentialAccess(t *testing.T) {
 		t.Fatalf("create alice: %v", err)
 	}
 	defer func() {
-	if err := repository.DeleteUser(db, &alice); err != nil {
-		t.Errorf("cleanup alice: %v", err)
-	}
-}()
+		if err := repository.DeleteUser(db, &alice); err != nil {
+			t.Errorf("cleanup alice: %v", err)
+		}
+	}()
 	if err := repository.CreateUser(db, &bob); err != nil {
 		t.Fatalf("create bob: %v", err)
 	}
 	defer func() {
-	if err := repository.DeleteUser(db, &bob); err != nil {
-		t.Errorf("cleanup bob: %v", err)
-	}
-}()
-	
+		if err := repository.DeleteUser(db, &bob); err != nil {
+			t.Errorf("cleanup bob: %v", err)
+		}
+	}()
+
 	// Alice's credential, with known values to compare against later.
 	cred := models.Credential{
 		UserID:             alice.ID,
@@ -169,12 +169,12 @@ func TestCrossUserCredentialAccess(t *testing.T) {
 		t.Fatalf("create credential: %v", err)
 	}
 	defer func() {
-	if err := repository.DeleteCredential(db, cred.ID, alice.ID); err != nil {
-		t.Errorf("cleanup credential: %v", err)
-	}
-}()
+		if err := repository.DeleteCredential(db, cred.ID, alice.ID); err != nil {
+			t.Errorf("cleanup credential: %v", err)
+		}
+	}()
 	// Bob tries to overwrite Alice's credential.
-		hijack := models.Credential{SiteName: "hacked", UsernameCiphertext: "evil", PasswordCiphertext: "evil"}
+	hijack := models.Credential{SiteName: "hacked", UsernameCiphertext: "evil", PasswordCiphertext: "evil"}
 	err = repository.UpdateCredentialForUser(db, cred.ID, bob.ID, hijack)
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		t.Fatalf("bob's update: expected not found, got %v", err)
@@ -195,4 +195,5 @@ func TestCrossUserCredentialAccess(t *testing.T) {
 		t.Fatalf("alice's credential was modified: %+v", got)
 	}
 }
+
 var key60 = make([]byte, 60) // placeholder wrapped key (nonce 12 + key 32 + tag 16)

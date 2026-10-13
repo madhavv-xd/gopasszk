@@ -8,12 +8,12 @@ import (
 )
 
 func Connect() (*gorm.DB, error) {
-	cfg ,err := config.LoadConfig()
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		return nil , err 
+		return nil, err
 	}
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
-		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName , cfg.DBPort , cfg.DBSSLMode)
+		cfg.DBHost, cfg.DBUser, cfg.DBPassword, cfg.DBName, cfg.DBPort, cfg.DBSSLMode)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{TranslateError: true})
 	if err != nil {
 		return nil, err

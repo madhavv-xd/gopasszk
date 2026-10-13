@@ -13,12 +13,12 @@ func RequireAuth(jwtsecret []byte) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized , gin.H{"error" : "missing auth header"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing auth header"})
 			c.Abort()
-			return 
+			return
 		}
 		const bearerPrefix = "Bearer "
-		if !strings.HasPrefix(authHeader , bearerPrefix) {
+		if !strings.HasPrefix(authHeader, bearerPrefix) {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header"})
 			c.Abort()
 			return
@@ -26,13 +26,13 @@ func RequireAuth(jwtsecret []byte) gin.HandlerFunc {
 		tokenString := strings.TrimPrefix(authHeader, bearerPrefix)
 
 		claims := &auth.Claims{}
-		token , err := jwt.ParseWithClaims(tokenString , claims , func(t *jwt.Token) (interface{}, error) {
-			return jwtsecret, nil 
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+			return jwtsecret, nil
 		})
-		if err != nil || !token.Valid{
-			c.JSON(http.StatusUnauthorized , gin.H{"error" : "invalid or expired token"})
+		if err != nil || !token.Valid {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired token"})
 			c.Abort()
-			return 
+			return
 		}
 
 		c.Set("userID", claims.UserID)

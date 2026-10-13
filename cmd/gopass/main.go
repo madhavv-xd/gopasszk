@@ -13,6 +13,7 @@ import (
 	"github.com/madhavv-xd/gopasszk/internal/client"
 	"github.com/madhavv-xd/gopasszk/internal/crypto"
 	"github.com/madhavv-xd/gopasszk/internal/pwgn"
+	"github.com/madhavv-xd/gopasszk/internal/vault"
 )
 
 func main() {
@@ -40,7 +41,7 @@ func main() {
 		err = runDelete(args)
 	case "logout":
 		err = runLogout(args)
-	case "help" , "-h" , "--help":
+	case "help", "-h", "--help":
 		err = runHelp(args)
 	case "show":
 		err = runShow(args)
@@ -110,7 +111,7 @@ func runRegister(args []string) error {
 		return errors.New("passwords don't match")
 	}
 
-		salt, err := crypto.GenerateSalt()
+	salt, err := crypto.GenerateSalt()
 	if err != nil {
 		return err
 	}
@@ -160,7 +161,6 @@ func runRegister(args []string) error {
 	return nil
 }
 
-
 func runLogin(args []string) error {
 	email, err := promptLine("Email: ")
 	if err != nil {
@@ -171,9 +171,9 @@ func runLogin(args []string) error {
 		return err
 	}
 
-	u , err := serverURL()
+	u, err := serverURL()
 	if err != nil {
-		return err 
+		return err
 	}
 	c := client.New(u)
 	salt, err := c.GetSalt(email)
@@ -182,7 +182,7 @@ func runLogin(args []string) error {
 	}
 	authHash := crypto.DeriveAuthHash(pw, salt)
 
-	token, _ ,err := c.Login(email, authHash)
+	token, _, err := c.Login(email, authHash)
 	if err != nil {
 		return err
 	}
@@ -193,12 +193,12 @@ func runLogin(args []string) error {
 	return nil
 }
 
-func runLogout(args []string) error{
+func runLogout(args []string) error {
 	if err := deleteSession(); err != nil {
-		return err 
+		return err
 	}
 	fmt.Println("logged out.")
-	return nil 
+	return nil
 }
 
 func runAdd(args []string) error {
@@ -258,11 +258,11 @@ func runAdd(args []string) error {
 		// anything else (e.g. "n"): loop and ask for the password again
 	}
 
-	userCT, err := encryptField(key, username)
+	userCT, err := vault.EncryptField(key, username)
 	if err != nil {
 		return err
 	}
-	passCT, err := encryptField(key, string(password))
+	passCT, err := vault.EncryptField(key, string(password))
 	if err != nil {
 		return err
 	}
@@ -276,25 +276,25 @@ func runAdd(args []string) error {
 }
 func runList(args []string) error {
 	//run list will show the list using the current session and load the creds directly
-	//there will be another one to show the creds by the ids 
+	//there will be another one to show the creds by the ids
 	s, err := loadSession()
 	if err != nil {
-		return err 
+		return err
 	}
-	u , err := serverURL()
+	u, err := serverURL()
 	if err != nil {
-		return  err 
+		return err
 	}
 	c := client.New(u)
 	c.Token = s.Token
 
-	creds , err := c.ListCredentials()
+	creds, err := c.ListCredentials()
 	if err != nil {
-		return  err 
+		return err
 	}
 	if len(creds) == 0 {
 		fmt.Println("No credentials yet.")
-		return  nil 
+		return nil
 	}
 	for _, cr := range creds {
 		fmt.Printf("%s  %s\n", cr.ID, cr.SiteName)
@@ -312,7 +312,7 @@ func runEdit(args []string) error {
 	if err != nil {
 		return err
 	}
-	site, user, pass, err := findCredential(c, key, id)
+	site, user, pass, err := vault.FindCredential(c, key, id)
 	if err != nil {
 		return err
 	}
@@ -341,11 +341,11 @@ func runEdit(args []string) error {
 		newPass = []byte(pass)
 	}
 
-	userCT, err := encryptField(key, newUser)
+	userCT, err := vault.EncryptField(key, newUser)
 	if err != nil {
 		return err
 	}
-	passCT, err := encryptField(key, string(newPass))
+	passCT, err := vault.EncryptField(key, string(newPass))
 	if err != nil {
 		return err
 	}
@@ -365,9 +365,9 @@ func runDelete(args []string) error {
 	if err != nil {
 		return err
 	}
-	u , err := serverURL()
+	u, err := serverURL()
 	if err != nil {
-		return err 
+		return err
 	}
 	c := client.New(u)
 	c.Token = s.Token
@@ -381,7 +381,7 @@ func runDelete(args []string) error {
 
 func runHelp(args []string) error {
 	usage()
-	return nil 
+	return nil
 }
 
 func runShow(args []string) error {
@@ -392,7 +392,7 @@ func runShow(args []string) error {
 	if err != nil {
 		return err
 	}
-	site, user, pass, err := findCredential(c, key, args[0])
+	site, user, pass, err := vault.FindCredential(c, key, args[0])
 	if err != nil {
 		return err
 	}
@@ -401,20 +401,20 @@ func runShow(args []string) error {
 }
 
 func runGenerate(args []string) error {
-	length := 20 
+	length := 20
 	if len(args) == 1 {
-		n , err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args[0])
 		if err != nil {
 			return errors.New("length must be a number")
 		}
-		length = n 
+		length = n
 	}
-	pw , err := pwgn.Generate(length)
+	pw, err := pwgn.Generate(length)
 	if err != nil {
-		return  err 
+		return err
 	}
 	fmt.Println(pw)
-	return nil 
+	return nil
 }
 
 func runCopy(args []string) error {
@@ -425,7 +425,7 @@ func runCopy(args []string) error {
 	if err != nil {
 		return err
 	}
-	site, _, pass, err := findCredential(c, key, args[0])
+	site, _, pass, err := vault.FindCredential(c, key, args[0])
 	if err != nil {
 		return err
 	}
@@ -435,24 +435,24 @@ func runCopy(args []string) error {
 	}
 	fmt.Printf("Copied password for %s. Clearing in 30s (Ctrl+C to clear now)...\n", site)
 
-	//make a channel with a buffered input so that it can deliver os.Signal value 
-	interrupt := make(chan os.Signal , 1) //basically a channel for handling the ctrl c 
-	signal.Notify(interrupt , os.Interrupt)
+	//make a channel with a buffered input so that it can deliver os.Signal value
+	interrupt := make(chan os.Signal, 1) //basically a channel for handling the ctrl c
+	signal.Notify(interrupt, os.Interrupt)
 	defer signal.Stop(interrupt)
 
 	select {
-	case <-time.After(30* time.Second):
-	case <- interrupt:
+	case <-time.After(30 * time.Second):
+	case <-interrupt:
 	}
 
-	current , err := clipboard.ReadAll()
+	current, err := clipboard.ReadAll()
 	if err == nil && current == pass {
 		if err := clipboard.WriteAll(""); err != nil {
-			return err 
+			return err
 		}
 		fmt.Println("clipboard cleared.")
 	}
-	return nil 
+	return nil
 }
 
 func runSearch(args []string) error {
@@ -489,46 +489,46 @@ func runAudit(args []string) error {
 	if err != nil {
 		return err
 	}
-	creds , err := c.ListCredentials()
+	creds, err := c.ListCredentials()
 	if err != nil {
-		return  err 
+		return err
 	}
 	if len(creds) == 0 {
 		fmt.Println("No credentials yet.")
-		return  nil 
+		return nil
 	}
-	//now loop and put the weak creds inside the array and make map for password -> site 
-	var weak []string 
-	var breached []string //for inserting the breached passes 
+	//now loop and put the weak creds inside the array and make map for password -> site
+	var weak []string
+	var breached []string //for inserting the breached passes
 	seen := map[string][]string{}
 
-	for _ , cr := range creds {
-		pass , err := decryptField(key , cr.PasswordCiphertext)
+	for _, cr := range creds {
+		pass, err := vault.DecryptField(key, cr.PasswordCiphertext)
 		if err != nil {
-			return err 
+			return err
 		}
 		if isWeak(pass) {
-			weak = append(weak , cr.SiteName)
+			weak = append(weak, cr.SiteName)
 		}
-		if n , err := pwnedCount(pass); err != nil {
-			fmt.Println("warning: breach check failed for" , cr.SiteName+":" , err)
-		} else if n >0 {
-			breached = append(breached, fmt.Sprintf("%s (seen %d times)" , cr.SiteName , n))
-		} 
+		if n, err := pwnedCount(pass); err != nil {
+			fmt.Println("warning: breach check failed for", cr.SiteName+":", err)
+		} else if n > 0 {
+			breached = append(breached, fmt.Sprintf("%s (seen %d times)", cr.SiteName, n))
+		}
 		seen[pass] = append(seen[pass], cr.SiteName)
 	}
 	issues := 0
 	if len(weak) > 0 {
 		fmt.Println("weak passwords : ")
-		for _ , site := range weak {
-			fmt.Println(" -",site)
+		for _, site := range weak {
+			fmt.Println(" -", site)
 		}
 		issues += len(weak)
 	}
 	if len(breached) > 0 {
 		fmt.Println("Breached passwords:")
-		for _ , entry := range breached {
-			fmt.Println(" -" , entry)
+		for _, entry := range breached {
+			fmt.Println(" -", entry)
 		}
 		issues += len(breached)
 	}

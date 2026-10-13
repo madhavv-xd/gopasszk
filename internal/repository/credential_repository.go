@@ -11,21 +11,21 @@ func CreateCredential(db *gorm.DB, credential *models.Credential) error {
 	return result.Error
 }
 
-func DeleteCredential(db *gorm.DB, id string , userID string) error {
+func DeleteCredential(db *gorm.DB, id string, userID string) error {
 	//this function will return an error or just done
-	result := db.Where("id = ? AND user_id = ?" , id , userID).Delete(&models.Credential{})
+	result := db.Where("id = ? AND user_id = ?", id, userID).Delete(&models.Credential{})
 	if result.Error != nil {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
-	return nil 
+	return nil
 }
 
-func GetCredentialById(db *gorm.DB, id string , userID string) (*models.Credential, error) {
+func GetCredentialById(db *gorm.DB, id string, userID string) (*models.Credential, error) {
 	var cred models.Credential
-	result := db.First(&cred, "id = ? AND user_id = ?", id , userID)
+	result := db.First(&cred, "id = ? AND user_id = ?", id, userID)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -42,11 +42,11 @@ func ListCredentialsByUser(db *gorm.DB, userID string) ([]models.Credential, err
 	return creds, nil
 }
 
-func UpdateCredentialForUser(db *gorm.DB, id string , userID string , updated models.Credential) error {
+func UpdateCredentialForUser(db *gorm.DB, id string, userID string, updated models.Credential) error {
 	result := db.Model(&models.Credential{}).
-	Where("user_id = ? AND id = ?" , userID , id).
-	Select("site_name" , "username_ciphertext" , "password_ciphertext").
-	Updates(updated)
+		Where("user_id = ? AND id = ?", userID, id).
+		Select("site_name", "username_ciphertext", "password_ciphertext").
+		Updates(updated)
 
 	if result.Error != nil {
 		return result.Error
@@ -54,16 +54,16 @@ func UpdateCredentialForUser(db *gorm.DB, id string , userID string , updated mo
 	if result.RowsAffected == 0 {
 		return gorm.ErrRecordNotFound
 	}
-	return nil 
+	return nil
 }
 
-func SearchCredentialsByUser(db *gorm.DB , userID string , q string)([]models.Credential , error){
+func SearchCredentialsByUser(db *gorm.DB, userID string, q string) ([]models.Credential, error) {
 	var creds []models.Credential
 	err := db.
-		Where("user_id = ? AND site_name ILIKE ?" , userID , "%"+q+"%").
+		Where("user_id = ? AND site_name ILIKE ?", userID, "%"+q+"%").
 		Find(&creds).Error
 	if err != nil {
-		return nil , err 
+		return nil, err
 	}
-	return creds , nil 
-} //searching creds by the user 
+	return creds, nil
+} //searching creds by the user

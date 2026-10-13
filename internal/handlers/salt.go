@@ -18,18 +18,18 @@ import (
 // @Success      200    {object}  map[string]string
 // @Failure      400    {object}  map[string]string
 // @Router       /salt [get]
-func (h* Handler) GetSalt(c *gin.Context) {
+func (h *Handler) GetSalt(c *gin.Context) {
 	email := c.Query("email")
 	if email == "" {
-		c.JSON(http.StatusBadRequest , gin.H{"error" : "email is reqd"})
-		return 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email is reqd"})
+		return
 	}
 
-	salt , err  := auth.GetSaltForEmail(h.DB , email , h.Secret)
+	salt, err := auth.GetSaltForEmail(h.DB, email, h.Secret)
 	if err != nil {
-		log.Printf("get salt failed: %v" , err)
-		c.JSON(http.StatusInternalServerError , gin.H{"error" : "internal error"})
-		return 
+		log.Printf("get salt failed: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
 	}
-	c.JSON(http.StatusOK , gin.H{"salt" : base64.StdEncoding.EncodeToString(salt)})
+	c.JSON(http.StatusOK, gin.H{"salt": base64.StdEncoding.EncodeToString(salt)})
 }

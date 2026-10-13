@@ -22,12 +22,12 @@ type CredentialRequest struct {
 }
 
 type CredentialResponse struct {
-	ID                 string `json:"id"`
-	SiteName           string `json:"site_name"`
-	UsernameCiphertext string `json:"username_ciphertext"`
-	PasswordCiphertext string `json:"password_ciphertext"`
-	CreatedAt          time.Time   `json:"created_at"`
-	UpdatedAt          time.Time   `json:"updated_at"`
+	ID                 string    `json:"id"`
+	SiteName           string    `json:"site_name"`
+	UsernameCiphertext string    `json:"username_ciphertext"`
+	PasswordCiphertext string    `json:"password_ciphertext"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 func toCredentialResponse(c models.Credential) CredentialResponse {
@@ -42,14 +42,14 @@ func toCredentialResponse(c models.Credential) CredentialResponse {
 }
 
 const (
-	gcmNonceSize = 12
-	gcmTagSize = 16
+	gcmNonceSize     = 12
+	gcmTagSize       = 16
 	minCiphertextLen = gcmNonceSize + gcmTagSize
 	maxCiphertextLen = 4096
 )
 
 func validateCipherText(s string) error {
-	decoded , err := base64.StdEncoding.DecodeString(s)
+	decoded, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
 		return errors.New("not valid base64")
 	}
@@ -59,7 +59,7 @@ func validateCipherText(s string) error {
 	if len(decoded) > maxCiphertextLen {
 		return errors.New("ciphertext too long")
 	}
-	return nil 
+	return nil
 }
 
 // CreateCredential godoc
@@ -75,24 +75,24 @@ func validateCipherText(s string) error {
 // @Failure      401      {object}  map[string]string
 // @Failure      500      {object}  map[string]string
 // @Router       /credentials [post]
-func(h *Handler) CreateCredential(c *gin.Context){
+func (h *Handler) CreateCredential(c *gin.Context) {
 	var req CredentialRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error":"invalid request"})
-		return 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
 	}
 	if err := validateCipherText(req.UsernameCiphertext); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error":err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if err := validateCipherText(req.PasswordCiphertext); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error":err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	userID , ok := c.MustGet("userID").(string)
+	userID, ok := c.MustGet("userID").(string)
 	if !ok {
-	c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-	return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 
 	cred := models.Credential{
@@ -122,33 +122,33 @@ func(h *Handler) CreateCredential(c *gin.Context){
 // @Failure      401  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /credentials [get]
-func(h *Handler) ListCredentials(c *gin.Context) {
-	userID , ok := c.MustGet("userID").(string)
+func (h *Handler) ListCredentials(c *gin.Context) {
+	userID, ok := c.MustGet("userID").(string)
 	if !ok {
-		c.JSON(http.StatusInternalServerError , gin.H{"error" : "internal server error"})
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 	q := c.Query("q")
 	var creds []models.Credential
-	var err error  
+	var err error
 	if q == "" {
-		creds , err = repository.ListCredentialsByUser(h.DB , userID)
+		creds, err = repository.ListCredentialsByUser(h.DB, userID)
 	} else {
-		creds , err = repository.SearchCredentialsByUser(h.DB, userID , q)
+		creds, err = repository.SearchCredentialsByUser(h.DB, userID, q)
 	}
 	if err != nil {
-		log.Printf("list credentials: %v" , err )
-		c.JSON(http.StatusInternalServerError , gin.H{"error":"internal server error"})
-		return 
+		log.Printf("list credentials: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
-	responses := make([]CredentialResponse , 0, len(creds))
-	for _ , cred := range creds {
-		responses = append(responses , toCredentialResponse(cred))
+	responses := make([]CredentialResponse, 0, len(creds))
+	for _, cred := range creds {
+		responses = append(responses, toCredentialResponse(cred))
 	}
-	c.JSON(http.StatusOK , gin.H{"credentials" : responses})
+	c.JSON(http.StatusOK, gin.H{"credentials": responses})
 }
 
-//now the put and delete funcs
+// now the put and delete funcs
 // UpdateCredential godoc
 // @Summary      Update a credential
 // @Description  Replaces a credential's site name and ciphertexts. Returns 404 if it doesn't exist or isn't yours.
@@ -163,19 +163,19 @@ func(h *Handler) ListCredentials(c *gin.Context) {
 // @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /credentials/{id} [put]
-func(h *Handler) UpdateCredential(c *gin.Context) {
-	userID , ok := c.MustGet("userID").(string)
+func (h *Handler) UpdateCredential(c *gin.Context) {
+	userID, ok := c.MustGet("userID").(string)
 	if !ok {
-		c.JSON(http.StatusInternalServerError , gin.H{"error" : "internal server errir"})
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server errir"})
+		return
 	}
 	id := c.Param("id")
 	if _, err := uuid.Parse(id); err != nil {
-		c.JSON(http.StatusBadRequest , gin.H{"error":"invalid id"})
-		return 
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
 	}
 
-	var req CredentialRequest 
+	var req CredentialRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
@@ -188,21 +188,21 @@ func(h *Handler) UpdateCredential(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	updated := models.Credential {
-		SiteName: req.SiteName,
+	updated := models.Credential{
+		SiteName:           req.SiteName,
 		UsernameCiphertext: req.UsernameCiphertext,
 		PasswordCiphertext: req.PasswordCiphertext,
 	}
 
-	err := repository.UpdateCredentialForUser(h.DB , id , userID , updated)
+	err := repository.UpdateCredentialForUser(h.DB, id, userID, updated)
 	switch {
-		case err == nil: 
-			c.Status(http.StatusNoContent)
-	case errors.Is(err , gorm.ErrRecordNotFound):
-		c.JSON(http.StatusNotFound , gin.H{"error":"credential not found"})
+	case err == nil:
+		c.Status(http.StatusNoContent)
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "credential not found"})
 	default:
-		log.Printf("updated credential: %v" , err) 
-		c.JSON(http.StatusInternalServerError , gin.H{"error":"internal server error"})
+		log.Printf("updated credential: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }
 
@@ -218,25 +218,25 @@ func(h *Handler) UpdateCredential(c *gin.Context) {
 // @Failure      404  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
 // @Router       /credentials/{id} [delete]
-func(h *Handler) DeleteCredential(c *gin.Context) {
-	userID , ok := c.MustGet("userID").(string)
+func (h *Handler) DeleteCredential(c *gin.Context) {
+	userID, ok := c.MustGet("userID").(string)
 	if !ok {
-		c.JSON(http.StatusInternalServerError , gin.H{"error":"internal server error"})
-		return 
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+		return
 	}
 	id := c.Param("id")
-	if _,err := uuid.Parse(id); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error":"invalid id"})
-		return 
+	if _, err := uuid.Parse(id); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+		return
 	}
-	err := repository.DeleteCredential(h.DB , id , userID)
+	err := repository.DeleteCredential(h.DB, id, userID)
 	switch {
 	case err == nil:
 		c.Status(http.StatusNoContent)
-	case errors.Is(err , gorm.ErrRecordNotFound):
-		c.JSON(http.StatusNotFound , gin.H{"error":"credential not found"})
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "credential not found"})
 	default:
-		log.Printf("delete credential: %v" , err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error":"interval server error"})
+		log.Printf("delete credential: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "interval server error"})
 	}
 }

@@ -36,15 +36,15 @@ func saveSession(s session) error {
 }
 
 func deleteSession() error {
-	path , err := sessionPath()
+	path, err := sessionPath()
 	if err != nil {
-		return err 
+		return err
 	}
 	err = os.Remove(path)
-	if errors.Is(err , os.ErrNotExist){
+	if errors.Is(err, os.ErrNotExist) {
 		return errors.New("not logged in")
 	}
-	return err 
+	return err
 }
 
 func loadSession() (session, error) {

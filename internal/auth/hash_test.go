@@ -17,7 +17,7 @@ func TestHash(t *testing.T) {
 	}
 }
 
-//tests
+// tests
 func VerifyHash(t *testing.T) {
 	authHash := make([]byte, 32)
 
@@ -34,7 +34,7 @@ func VerifyHash(t *testing.T) {
 	}
 }
 
-//tests
+// tests
 func VerifyHash2(t *testing.T) {
 	authHash := make([]byte, 32)
 	authHash[0] = 1

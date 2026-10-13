@@ -3,7 +3,7 @@ package handlers
 import "gorm.io/gorm"
 
 type Handler struct {
-	DB *gorm.DB
-	Secret []byte 
+	DB        *gorm.DB
+	Secret    []byte
 	JWTSecret []byte
 }

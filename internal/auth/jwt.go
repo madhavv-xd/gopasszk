@@ -11,16 +11,15 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-//issue token function 
-func IssueToken(userID string , jwtsecret []byte , ttl time.Duration) (string , error) {
+// issue token function
+func IssueToken(userID string, jwtsecret []byte, ttl time.Duration) (string, error) {
 	claims := Claims{
 		UserID: userID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(ttl)),
-			IssuedAt: jwt.NewNumericDate(time.Now()),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtsecret)
 }
-

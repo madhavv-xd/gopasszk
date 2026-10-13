@@ -11,12 +11,12 @@ import (
 func main() {
 	db, err := database.Connect()
 	if err != nil {
-		log.Fatalf("Unable to connect: %v" , err)
+		log.Fatalf("Unable to connect: %v", err)
 		return
 	}
 	err = db.AutoMigrate(&models.User{}, &models.Credential{})
 	if err != nil {
-		log.Fatalf("migration failed: %v" , err)
+		log.Fatalf("migration failed: %v", err)
 		return
 	}
 	fmt.Println("migration successful")

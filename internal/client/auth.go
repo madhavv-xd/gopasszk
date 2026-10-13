@@ -2,9 +2,12 @@ package client
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"net/url"
 )
+
+var ErrUnauthorized = errors.New("unauthorized")
 
 func (c *Client) Register(email string, salt, authHash, wrappedVK, recoveryWrapped, recoveryAuth []byte) error {
 	enc := base64.StdEncoding.EncodeToString
@@ -55,6 +58,7 @@ func (c *Client) Login(email string, authHash []byte) (string, []byte, error) {
 	if err := c.do("POST", "/login", body, &resp); err != nil {
 		return "", nil, err
 	}
+
 	wrappedVK, err := base64.StdEncoding.DecodeString(resp.WrappedVaultKey)
 	if err != nil {
 		return "", nil, fmt.Errorf("decode wrapped vault key: %w", err)

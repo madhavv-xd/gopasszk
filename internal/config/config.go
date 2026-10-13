@@ -1,22 +1,22 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"github.com/joho/godotenv"
 	"os"
 	"path/filepath"
-	"errors"
 )
 
 type Config struct {
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBHost     string
+	DBUser       string
+	DBPassword   string
+	DBName       string
+	DBHost       string
 	ServerSecret string
-	JWTSecret string
-	DBPort string 
-	DBSSLMode string 
+	JWTSecret    string
+	DBPort       string
+	DBSSLMode    string
 }
 
 func findEnvFile() string {
@@ -34,7 +34,7 @@ func findEnvFile() string {
 	}
 }
 
-func getEnv(key , fallback string) string {
+func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v //return the value
 	}

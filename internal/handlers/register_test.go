@@ -29,32 +29,32 @@ func validPayload(email string) map[string]string {
 }
 
 func TestRegisterSuccess(t *testing.T) {
-	router , db := setupRouter(t)
-	defer cleanupUser(t , db , "handler-success@example.com")
+	router, db := setupRouter(t)
+	defer cleanupUser(t, db, "handler-success@example.com")
 	payload := validPayload("handler-success@example.com")
-	w := postRegister(t , router , payload)
+	w := postRegister(t, router, payload)
 	if w.Code != http.StatusCreated {
-		t.Errorf("expected 201 , got %d: %s" , w.Code , w.Body.String())
+		t.Errorf("expected 201 , got %d: %s", w.Code, w.Body.String())
 	}
 }
 
-func setupRouter(t *testing.T )(*gin.Engine , *gorm.DB) {
+func setupRouter(t *testing.T) (*gin.Engine, *gorm.DB) {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
-	db , err := database.Connect()
+	db, err := database.Connect()
 	if err != nil {
-		t.Fatalf("error connecting to the db: %v" , err)
+		t.Fatalf("error connecting to the db: %v", err)
 	}
 	h := &Handler{DB: db}
 
 	router := gin.New()
 
-	router.POST("/register" , h.Register)
+	router.POST("/register", h.Register)
 
-	return router , db 
+	return router, db
 }
 
-func cleanupUser(t *testing.T , db *gorm.DB , email string) {
+func cleanupUser(t *testing.T, db *gorm.DB, email string) {
 	t.Helper()
 	res, err := repository.GetUserByEmail(db, email)
 	if err != nil {
@@ -66,76 +66,76 @@ func cleanupUser(t *testing.T , db *gorm.DB , email string) {
 	}
 }
 
-func postRegister(t *testing.T , router *gin.Engine , payload map[string]string) *httptest.ResponseRecorder {
+func postRegister(t *testing.T, router *gin.Engine, payload map[string]string) *httptest.ResponseRecorder {
 	t.Helper()
 	body, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("erorr getting the payload: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/register" ,  bytes.NewReader(body))
+	req := httptest.NewRequest(http.MethodPost, "/register", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w , req)
+	router.ServeHTTP(w, req)
 
 	return w
 }
 
 func TestRegisterWrongSaltLength(t *testing.T) {
-	router , db := setupRouter(t)
-	defer cleanupUser(t , db , "handler-success2@example.com")
+	router, db := setupRouter(t)
+	defer cleanupUser(t, db, "handler-success2@example.com")
 	payload := validPayload("handler-success2@example.com")
 	payload["salt"] = b64(3)
-	w := postRegister(t , router , payload)
+	w := postRegister(t, router, payload)
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
+		t.Errorf("expected 400 , got %d: %s", w.Code, w.Body.String())
 	}
 }
 
 func TestRegisterWrongAuthHashLength(t *testing.T) {
-	router , db := setupRouter(t)
-	defer cleanupUser(t , db , "handler-success3@example.com")
+	router, db := setupRouter(t)
+	defer cleanupUser(t, db, "handler-success3@example.com")
 	payload := validPayload("handler-success3@example.com")
 	payload["auth_hash"] = b64(3)
-	w := postRegister(t , router , payload)
+	w := postRegister(t, router, payload)
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
+		t.Errorf("expected 400 , got %d: %s", w.Code, w.Body.String())
 	}
 }
 
 func TestRegisterMissingEmail(t *testing.T) {
-	router , db := setupRouter(t)
-	defer cleanupUser(t , db , "")
+	router, db := setupRouter(t)
+	defer cleanupUser(t, db, "")
 	payload := validPayload("")
 	delete(payload, "email")
-	w := postRegister(t , router , payload)
+	w := postRegister(t, router, payload)
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
+		t.Errorf("expected 400 , got %d: %s", w.Code, w.Body.String())
 	}
 }
 
 func TestRegisterBadBase64(t *testing.T) {
-	router , _:= setupRouter(t)
+	router, _ := setupRouter(t)
 	payload := validPayload("handler-success3@example.com")
 	payload["salt"] = "not b64"
-	w := postRegister(t , router , payload)
+	w := postRegister(t, router, payload)
 	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400 , got %d: %s" , w.Code , w.Body.String())
+		t.Errorf("expected 400 , got %d: %s", w.Code, w.Body.String())
 	}
 }
 
 func TestRegisterSuccessDupe(t *testing.T) {
-	router , db := setupRouter(t)
-	defer cleanupUser(t , db , "handler-success5@example.com")
+	router, db := setupRouter(t)
+	defer cleanupUser(t, db, "handler-success5@example.com")
 	payload := validPayload("handler-success5@example.com")
-	w := postRegister(t , router , payload)
+	w := postRegister(t, router, payload)
 	if w.Code != http.StatusCreated {
-		t.Fatalf("expected 201 , got %d: %s" , w.Code , w.Body.String())
+		t.Fatalf("expected 201 , got %d: %s", w.Code, w.Body.String())
 	}
-	w2 := postRegister(t , router , payload)
+	w2 := postRegister(t, router, payload)
 	if w2.Code != http.StatusConflict {
-		t.Errorf("expected 409 , got %d: %s" , w.Code , w.Body.String())
+		t.Errorf("expected 409 , got %d: %s", w.Code, w.Body.String())
 	}
 }
 func TestRegisterWrongWrappedKeyLengths(t *testing.T) {

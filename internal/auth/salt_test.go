@@ -2,18 +2,18 @@ package auth
 
 import (
 	"bytes"
-	"testing"
 	"github.com/madhavv-xd/gopasszk/internal/database"
 	"github.com/madhavv-xd/gopasszk/internal/models"
 	"github.com/madhavv-xd/gopasszk/internal/repository"
-) 
+	"testing"
+)
 
 func TestGetSaltForEmail(t *testing.T) {
 	db, err := database.Connect()
 	if err != nil {
-		t.Fatalf("db connection error %v" , err )
+		t.Fatalf("db connection error %v", err)
 	}
-	secret := []byte("test-secret-for-me") //secret for the hmac function 
+	secret := []byte("test-secret-for-me") //secret for the hmac function
 
 	testSalt := []byte{
 		0x00, 0x8B, 0x3F, 0xFF,
@@ -23,9 +23,9 @@ func TestGetSaltForEmail(t *testing.T) {
 	}
 
 	user := models.User{
-		Email:    "megaxx@gmail.com",
-		AuthHash: "sample-auth-hash",
-		Salt:     testSalt,
+		Email:           "megaxx@gmail.com",
+		AuthHash:        "sample-auth-hash",
+		Salt:            testSalt,
 		WrappedVaultKey: key60, RecoveryWrappedKey: key60, RecoveryAuthHash: "recovery-hash",
 	}
 
@@ -40,13 +40,13 @@ func TestGetSaltForEmail(t *testing.T) {
 		}
 	}() //defered and deleted user
 
-	got , err := GetSaltForEmail(db, user.Email , secret)
+	got, err := GetSaltForEmail(db, user.Email, secret)
 	if err != nil {
 		t.Fatalf("error getting the user %v", err)
 	} //getting the user by the email
 
-	if !bytes.Equal(got , testSalt) {
-		t.Errorf("known user: expected %x , got %x" , testSalt , got)
+	if !bytes.Equal(got, testSalt) {
+		t.Errorf("known user: expected %x , got %x", testSalt, got)
 	}
 
 	unknownEmail1 := "definitely-not-registered-1@example.com"
@@ -75,6 +75,7 @@ func TestGetSaltForEmail(t *testing.T) {
 	if bytes.Equal(fake1, fake2) {
 		t.Errorf("different unknown emails should return different fake salts, both got %x", fake1)
 	}
-	
+
 }
+
 var key60 = make([]byte, 60) // placeholder wrapped key (nonce 12 + key 32 + tag 16)

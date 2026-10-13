@@ -13,16 +13,15 @@ import (
 	"log"
 )
 
-//this will contain the struct for register request
+// this will contain the struct for register request
 type RegisterRequest struct {
-	Email    string `json:"email" binding:"required,email"`
-	Salt     string `json:"salt" binding:"required,base64"`
-	AuthHash string `json:"auth_hash" binding:"required,base64"`
+	Email              string `json:"email" binding:"required,email"`
+	Salt               string `json:"salt" binding:"required,base64"`
+	AuthHash           string `json:"auth_hash" binding:"required,base64"`
 	WrappedVaultKey    string `json:"wrapped_vault_key" binding:"required"`
 	RecoveryWrappedKey string `json:"recovery_wrapped_key" binding:"required"`
-	RecoveryAuthHash   string `json:"recovery_auth_hash" binding:"required"`	
+	RecoveryAuthHash   string `json:"recovery_auth_hash" binding:"required"`
 }
-
 
 // Register godoc
 // @Summary      Register a new account
@@ -61,7 +60,7 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "authhash length isnt appropriate"})
 		return
 	}
-		wrappedVK, err := base64.StdEncoding.DecodeString(req.WrappedVaultKey)
+	wrappedVK, err := base64.StdEncoding.DecodeString(req.WrappedVaultKey)
 	if err != nil || len(wrappedVK) != 60 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid wrapped vault key"})
 		return
@@ -89,7 +88,7 @@ func (h *Handler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 		return
 	}
-		user := models.User{
+	user := models.User{
 		Email:              req.Email,
 		Salt:               saltDecoded,
 		AuthHash:           phc,

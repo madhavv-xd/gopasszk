@@ -17,5 +17,5 @@ import (
 // @Router       /me [get]
 func (h *Handler) Me(c *gin.Context) {
 	userID := c.MustGet("userID").(string)
-	c.JSON(http.StatusOK , gin.H{"user_id":userID})
+	c.JSON(http.StatusOK, gin.H{"user_id": userID})
 }
