@@ -1,4 +1,4 @@
-package main
+package audit
 
 import (
 	"bufio"
@@ -12,9 +12,8 @@ import (
 	"unicode"
 )
 
-//a function for checking the password validation
-
-func isWeak(pass string) bool {
+// IsWeak reports a password under 12 characters or missing a character class.
+func IsWeak(pass string) bool {
 	if len(pass) < 12 {
 		return true
 	}
@@ -34,8 +33,9 @@ func isWeak(pass string) bool {
 	return !(hasLower && hasUpper && hasDigit && hasSymbol)
 }
 
-// okay , we will use the  k-anonimity of haveiBeenPwned api , that will detect the top 5 chars of the SHA-1 hashed password
-func pwnedCount(pass string) (int, error) {
+// PwnedCount asks Have I Been Pwned how often pass appears in known breaches.
+// k-anonymity: only the first 5 hex chars of its SHA-1 leave this machine.
+func PwnedCount(pass string) (int, error) {
 	sum := sha1.Sum([]byte(pass))
 	hash := strings.ToUpper(hex.EncodeToString(sum[:]))
 	prefix, suffix := hash[:5], hash[5:] //for k-anomi , we send the top 5 to it only

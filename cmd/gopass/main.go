@@ -10,23 +10,24 @@ import (
 	"time"
 
 	"github.com/atotto/clipboard"
+	"github.com/madhavv-xd/gopasszk/internal/audit"
 	"github.com/madhavv-xd/gopasszk/internal/client"
 	"github.com/madhavv-xd/gopasszk/internal/crypto"
 	"github.com/madhavv-xd/gopasszk/internal/pwgn"
+	"github.com/madhavv-xd/gopasszk/internal/tui"
 	"github.com/madhavv-xd/gopasszk/internal/vault"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		usage()
-		os.Exit(1)
+	cmd, args := "ui", []string(nil)
+	if len(os.Args) >= 2 {
+		cmd, args = os.Args[1], os.Args[2:]
 	}
-
-	cmd := os.Args[1]
-	args := os.Args[2:]
 
 	var err error
 	switch cmd {
+	case "ui":
+		err = runUI(args)
 	case "register":
 		err = runRegister(args)
 	case "login":
@@ -72,6 +73,8 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, `usage: gopass <command>
 
+  ui              full-screen terminal UI (the default with no command)
+
 account:
   register        create an account (shows your recovery phrase once)
   login           log in and save a session token
@@ -92,6 +95,19 @@ tools:
   generate [len]  generate a random password (default 20)
   audit           check for weak, reused, and breached passwords
   help            show this help`)
+}
+
+func runUI(args []string) error {
+	u, err := serverURL()
+	if err != nil {
+		return err
+	}
+	s, _ := loadSession() // no session: the email field starts empty
+	return tui.Run(u, s.Email, func(email, token string) {
+		_ = saveSession(session{Email: email, Token: token}) // best effort, like a remembered login
+	}, func() {
+		_ = deleteSession() // "not logged in" is fine here
+	})
 }
 
 func runRegister(args []string) error {
@@ -507,10 +523,10 @@ func runAudit(args []string) error {
 		if err != nil {
 			return err
 		}
-		if isWeak(pass) {
+		if audit.IsWeak(pass) {
 			weak = append(weak, cr.SiteName)
 		}
-		if n, err := pwnedCount(pass); err != nil {
+		if n, err := audit.PwnedCount(pass); err != nil {
 			fmt.Println("warning: breach check failed for", cr.SiteName+":", err)
 		} else if n > 0 {
 			breached = append(breached, fmt.Sprintf("%s (seen %d times)", cr.SiteName, n))
