@@ -6,10 +6,14 @@ import (
 	"os"
 )
 
+// defaultServer is overridden in release builds with
+// -ldflags "-X main.defaultServer=https://...".
+var defaultServer = "http://localhost:8080"
+
 func serverURL() (string, error) {
 	raw := os.Getenv("GOPASS_SERVER")
 	if raw == "" {
-		raw = "http://localhost:8080"
+		raw = defaultServer
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil {

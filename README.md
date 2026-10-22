@@ -12,6 +12,7 @@ Your master password never leaves your machine. The server stores only an Argon2
 - [Project structure](#project-structure)
 - [Quick start](#quick-start)
 - [Install the CLI](#install-the-cli)
+- [Deploy the server](#deploy-the-server)
 - [Using the CLI](#using-the-cli)
 - [API reference](#api-reference)
 - [Configuration](#configuration)
@@ -137,8 +138,32 @@ docker-compose.yml
 
 ## Install the CLI
 
+Prebuilt binaries are attached to each [GitHub release](https://github.com/madhavv-xd/gopasszk/releases).
+
+**Linux** (use `gopass-linux-arm64` on ARM):
+
 ```sh
-go install ./cmd/gopass
+mkdir -p ~/.local/bin
+curl -fsSL https://github.com/madhavv-xd/gopasszk/releases/latest/download/gopass-linux-amd64 -o ~/.local/bin/gopass
+chmod +x ~/.local/bin/gopass
+```
+
+`copy` needs `xclip`, `xsel` or `wl-clipboard` installed.
+
+**Windows (PowerShell):**
+
+```powershell
+$dir = "$env:LOCALAPPDATA\gopass"
+New-Item -ItemType Directory -Force $dir | Out-Null
+Invoke-WebRequest https://github.com/madhavv-xd/gopasszk/releases/latest/download/gopass-windows-amd64.exe -OutFile "$dir\gopass.exe"
+# once only: add to your user PATH, then open a new terminal
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path", "User") + ";$dir", "User")
+```
+
+**From source** (needs Go):
+
+```sh
+go install github.com/madhavv-xd/gopasszk/cmd/gopass@latest
 ```
 
 This puts `gopass` in `$(go env GOPATH)/bin` (or `$GOBIN`). Make sure that directory is on your `PATH`.
@@ -149,10 +174,29 @@ Or build a local binary instead:
 go build -o gopass.exe ./cmd/gopass
 ```
 
-Point the CLI at a different server with `GOPASS_SERVER` (default `http://localhost:8080`). Plain `http` is accepted only for `localhost` / `127.0.0.1`; anything else must be `https`.
+Release binaries default to the deployed server. Point the CLI elsewhere with `GOPASS_SERVER` (source builds default to `http://localhost:8080`). Plain `http` is accepted only for `localhost` / `127.0.0.1`; anything else must be `https`.
 
 ```sh
 GOPASS_SERVER=https://vault.example.com gopass login
+```
+
+### Releasing
+
+Set the repo variable `GOPASS_SERVER_URL` (Settings > Secrets and variables > Actions > Variables) to the deployed API, then push a tag:
+
+```sh
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+`.github/workflows/release.yml` builds Linux (amd64, arm64) and Windows (amd64) binaries with that URL baked in and publishes them as a release.
+
+## Deploy the server
+
+The `Dockerfile` builds the server and runs `migrate` on every start (AutoMigrate is idempotent). Any Docker host works (Render, Railway, Fly.io, a VPS). Set the [configuration](#configuration) variables in the host's dashboard. The host must terminate HTTPS, because the CLI refuses plain `http` for anything except localhost.
+
+```sh
+docker build -t gopasszk-server .
+docker run --env-file .env -p 8080:8080 gopasszk-server
 ```
 
 ## Using the CLI
@@ -222,6 +266,7 @@ Loaded from `.env` (found by walking up from the cwd) or the process environment
 | `DB_HOST` | no | `localhost` | Postgres host |
 | `DB_PORT` | no | `5432` | Postgres port |
 | `DB_SSLMODE` | no | `disable` | Postgres sslmode |
+| `PORT` | no | `8080` | Server listen port |
 | `GOPASS_SERVER` | no | `http://localhost:8080` | CLI only: API base URL |
 
 The server refuses to start if a required variable is missing.

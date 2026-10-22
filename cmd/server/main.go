@@ -10,6 +10,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"log"
+	"os"
 )
 
 // @title           Gopass API
@@ -52,7 +53,11 @@ func main() {
 		creds.DELETE("/:id", h.DeleteCredential)
 	}
 
-	err = router.Run(":8080")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	err = router.Run(":" + port)
 	if err != nil {
 		log.Fatal(err)
 	}

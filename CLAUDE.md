@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-All config comes from a `.env` at the repo root (gitignored). `config.LoadConfig` finds it by walking up from the cwd, so tests run from package dirs still pick it up. Required vars: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `SALT_HMAC_SECRET`, `JWT_SECRET`. The DB host is hardcoded to `localhost:5432`.
+All config comes from a `.env` at the repo root (gitignored). `config.LoadConfig` finds it by walking up from the cwd, so tests run from package dirs still pick it up. Required vars: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `SALT_HMAC_SECRET`, `JWT_SECRET`. Optional: `DB_HOST`, `DB_PORT`, `DB_SSLMODE` (default `localhost`, `5432`, `disable`) and `PORT` (server, default `8080`).
 
 ```sh
 docker compose up -d                 # Postgres 16, reads the same .env
